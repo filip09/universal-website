@@ -1,0 +1,22 @@
+{
+  "name": "universal-website",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Sites built from Google Sheets with a page-turning glass-stack layout, hosted on Cloudflare.",
+  "scripts": {
+    "build": "node src/cli.js build",
+    "publish-site": "node src/cli.js publish",
+    "local": "node src/cli.js build --local templates/klient-sablona.xlsx --media examples/media --out dist/demo",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "googleapis": "^144.0.0",
+    "sharp": "^0.33.5",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "wrangler": "^3.90.0"
+  }
+}

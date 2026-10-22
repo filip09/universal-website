@@ -1,0 +1,57 @@
+name: Publikovat web
+
+# Runs when someone clicks "Web → Publikovat" in a client sheet (via the control
+# sheet's script), or manually from the Actions tab.
+on:
+  repository_dispatch:
+    types: [publish]
+  workflow_dispatch:
+    inputs:
+      client:
+        description: "Id klienta z řídicí tabulky, nebo all pro všechny"
+        required: true
+        default: all
+
+concurrency:
+  group: publish-${{ github.event.client_payload.client || github.event.client_payload.sheet || inputs.client }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+      CONTROL_SHEET_ID: ${{ secrets.CONTROL_SHEET_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      TARGET: ${{ github.event.client_payload.client || inputs.client }}
+      SHEET: ${{ github.event.client_payload.sheet }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+
+      # Processed images are kept between runs, so only new images are optimised.
+      - uses: actions/cache@v4
+        with:
+          path: .cache
+          key: media-${{ env.TARGET || env.SHEET }}-${{ github.run_id }}
+          restore-keys: |
+            media-${{ env.TARGET || env.SHEET }}-
+            media-
+
+      - name: Publikovat
+        run: |
+          if [ -n "$SHEET" ]; then
+            node src/cli.js publish --sheet "$SHEET"
+          elif [ "$TARGET" = "all" ] || [ -z "$TARGET" ]; then
+            node src/cli.js publish --all
+          else
+            node src/cli.js publish --client "$TARGET"
+          fi

@@ -144,7 +144,7 @@ sheet("site", [("setting", 22), ("value", 46), ("co to dělá", 58)], [
     ("description", "Web, kterým se listuje, postavený z tabulky.", "Výchozí text pro vyhledávače a náhledy odkazů."),
     ("share_image", "img-hero", "Výchozí obrázek při sdílení odkazu (id z media)."),
     ("favicon", "img-favicon", "Malá ikona v záložce prohlížeče (id z media)."),
-    ("footer", "drobné: © 2026 Universal Website · Postaveno z tabulky", "Patička na každé stránce. Stejný zápis jako content."),
+    ("footer", "drobné: © {rok} {web}", "Patička na každé stránce. Stejný zápis jako content. {rok} je vždy aktuální rok, {web} je site_name. Prázdné = © rok a název webu."),
 ], note_cols=(2,), tab="6B5BFF")
 
 # ---------- styles ----------
@@ -264,7 +264,7 @@ table(["klíčové slovo", "anglicky", "co vytvoří", "příklad"], [
     ("poznámka:", "note:", "Rámeček s poznámkou", "poznámka: Tabulka se čte při sestavení."),
     ("tlačítko:", "button:", "Tlačítko: popis -> odkaz", "tlačítko: Napište nám -> https://example.com"),
     ("oddělovač:", "divider:", "Tenká čára; za dvojtečkou nic", "oddělovač:"),
-    ("drobné:", "small:", "Drobný text", "drobné: © 2026 Universal Website"),
+    ("drobné:", "small:", "Drobný text", "drobné: © {rok} {web}"),
 ], code_first=True)
 r += 1
 table(["uvnitř textu", "", "výsledek", "příklad"], [
@@ -289,6 +289,14 @@ c.font, c.alignment, c.fill = CODE, TOP, CONTENT_FILL
 g.merge_cells(start_row=r, start_column=1, end_row=r, end_column=4)
 g.row_dimensions[r].height = 150
 r += 1
+
+section("Proměnné")
+para("Do kteréhokoli textu můžete napsat proměnnou ve složených závorkách. Web ji při sestavení nahradí.")
+table(["proměnná", "anglicky", "co se dosadí", "příklad"], [
+    ("{rok}", "{year}", "Aktuální rok. Mění se sám, i když web dlouho nepublikujete.", "drobné: © {rok} {web}"),
+    ("{web}", "{site}", "Název webu z listu site (site_name).", "text: Vítejte na {web}."),
+    ("(c)", "", "Napíše se jako ©.", "drobné: (c) {rok} {web}"),
+], code_first=True)
 
 section("Obrázky a média")
 for line in [
@@ -321,6 +329,7 @@ for line in [
     "visible: no skryje stránku nebo položku, aniž byste ji mazali.",
     "Klíčové slovo s dvojtečkou vždy začíná nový kus. Nepište proto „poznámka:“ uprostřed běžné věty.",
     "Názvy sloupců (tmavé záhlaví) neměňte, web je podle nich čte.",
+    "Pod patičkou každé stránky je drobný odkaz platform by filipmracek.com. Ten je součástí platformy, v tabulce se nenastavuje.",
 ]:
     put(r, ["•", line])
     g.merge_cells(start_row=r, start_column=2, end_row=r, end_column=4)

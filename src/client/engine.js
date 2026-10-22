@@ -304,6 +304,10 @@
   draw(performance.now());
   requestAnimationFrame(fieldLoop);
 
+  // the year in footers stays current even if the site was built last year
+  const year = String(new Date().getFullYear());
+  document.querySelectorAll('.uw-year').forEach(el => { el.textContent = year; });
+
   // ---------- start ----------
   try { history.replaceState({ id: pages[cur].dataset.id }, ''); } catch (e) {}
   setMark(cur);

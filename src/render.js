@@ -4,7 +4,7 @@ import { mkdir, writeFile, readFile, rm } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseCell, isToken, inline, paragraphs, escapeHtml as esc, safeUrl, STYLES } from './markup.js';
+import { parseCell, isToken, inline, paragraphs, escapeHtml as esc, safeUrl, STYLES, setVariables } from './markup.js';
 import { ImagePipeline } from './images.js';
 import { str, num, isNo } from './model.js';
 
@@ -24,6 +24,7 @@ export async function renderSite({ model, media, outDir, cacheDir, warn, buildId
   await rm(outDir, { recursive: true, force: true });
   await mkdir(outDir, { recursive: true });
   const pipe = new ImagePipeline({ cacheDir, outDir, warn });
+  setVariables({ year: String(new Date().getFullYear()), site: model.site.name });
   const warnedIds = new Set();
   const warnOnce = (key, msg) => { if (!warnedIds.has(key)) { warnedIds.add(key); warn(msg); } };
 
@@ -197,7 +198,10 @@ export async function renderSite({ model, media, outDir, cacheDir, warn, buildId
   // ---------- pages ----------
   const total = model.pages.length;
   const showFolio = !isNo(model.styles.show_folio);
-  const footerHtml = model.site.footer ? `<footer class="page-foot">${await renderContent(model.site.footer, 'site › footer')}</footer>` : '';
+  // Footer: the client's text (default: © year + site name) and the platform credit, always.
+  const footerText = model.site.footer || 'drobné: © {rok} {web}';
+  const credit = `<p class="platform-credit"><a href="https://filipmracek.com" target="_blank" rel="noopener">platform by filipmracek.com</a></p>`;
+  const footerHtml = `<footer class="page-foot">${await renderContent(footerText, 'site › footer')}${credit}</footer>`;
   const articles = [];
   for (const [i, p] of model.pages.entries()) {
     const body = await renderContent(p.content, `pages › ${p.id}`);

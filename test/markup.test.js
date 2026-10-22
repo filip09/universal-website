@@ -43,3 +43,10 @@ test('model: hidden pages, order, home fallback', () => {
   assert.equal(m.site.home, 'a');
   assert.equal(warns.length, 1);
 });
+
+test('variables: year, site name, (c)', async () => {
+  const { setVariables } = await import('../src/markup.js');
+  setVariables({ year: '2031', site: 'Studio <X>' });
+  assert.equal(inline('(c) {rok} {web}'), '© <span class="uw-year">2031</span> Studio &lt;X&gt;');
+  assert.match(inline('{ year }'), /2031/);
+});

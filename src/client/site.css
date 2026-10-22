@@ -107,7 +107,11 @@ figcaption{font-size:.85em;color:var(--muted);margin-top:8px}
 .card .more{position:absolute;inset:0;font-size:0}
 .card:has(.more):hover{border-color:hsla(var(--h),var(--sat),70%,.35)}
 
-.page-foot{margin-top:40px;padding-top:18px;border-top:1px solid var(--faint)}
+.page-foot{margin-top:40px;padding-top:18px;border-top:1px solid var(--faint);display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px 24px}
+.page-foot > *{margin:0}
+.platform-credit{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em}
+.platform-credit a{color:var(--muted);text-decoration:none;transition:color .2s}
+.platform-credit a:hover{color:hsl(var(--h),var(--sat),80%)}
 
 /* bookmarks */
 .marks{position:fixed;top:96px;left:calc(50% + var(--pw) / 2 - 2px);display:flex;flex-direction:column;gap:6px;z-index:5}

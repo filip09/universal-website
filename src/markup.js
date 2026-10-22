@@ -75,9 +75,17 @@ export function safeUrl(url) {
   return '';
 }
 
+// Variables usable in any text: {rok}/{year} → current year (kept current in the
+// browser too), {web}/{site} → site name. Set once per build with setVariables().
+const VARS = { year: String(new Date().getFullYear()), site: '' };
+export function setVariables(v) { Object.assign(VARS, v); }
+
 /** Inline formatting: **bold**, *italic*, [text](link); single newlines become <br>. */
 export function inline(text) {
   let s = escapeHtml(text);
+  s = s.replace(/\{\s*(rok|year)\s*\}/gi, `<span class="uw-year">${VARS.year}</span>`)
+       .replace(/\{\s*(web|site)\s*\}/gi, escapeHtml(VARS.site))
+       .replace(/\(c\)/gi, '©');
   s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, label, url) => {
     const href = safeUrl(url.replace(/&amp;/g, '&'));
     if (!href) return label;

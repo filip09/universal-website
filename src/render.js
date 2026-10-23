@@ -6,6 +6,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseCell, isToken, inline, paragraphs, escapeHtml as esc, safeUrl, STYLES, setVariables } from './markup.js';
 import { ImagePipeline } from './images.js';
+import { fontHead } from './fonts.js';
+import { mkdir as mkdirp, readFile as readF, writeFile as writeF, stat as statF } from 'node:fs/promises';
 import { str, num, isNo } from './model.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -178,6 +180,27 @@ export async function renderSite({ model, media, outDir, cacheDir, warn, buildId
     return html.join('\n');
   }
 
+  // YouTube preview image, downloaded at build time so the page never contacts Google before a click.
+  async function youtubePoster(id) {
+    const dir = path.join(cacheDir, 'youtube');
+    const file = path.join(dir, id + '.jpg');
+    let ok = false;
+    try { await statF(file); ok = true; } catch {}
+    if (!ok) {
+      for (const size of ['maxresdefault', 'hqdefault']) {
+        try {
+          const r = await fetch(`https://i.ytimg.com/vi/${id}/${size}.jpg`, { signal: AbortSignal.timeout(8000) });
+          if (!r.ok) continue;
+          await mkdirp(dir, { recursive: true });
+          await writeF(file, Buffer.from(await r.arrayBuffer()));
+          ok = true; break;
+        } catch {}
+      }
+    }
+    if (!ok) return null;
+    return pipe.image({ key: 'yt:' + id, name: `youtube-${id}.jpg`, path: `YouTube ${id}`, fetch: () => readF(file) });
+  }
+
   async function renderVideo(value, style, where) {
     const s = style || 'normal';
     const entry = model.media.get(value);
@@ -186,7 +209,8 @@ export async function renderSite({ model, media, outDir, cacheDir, warn, buildId
     const yt = youtubeId(src), vm = vimeoId(src);
     if (yt || vm) {
       const embed = yt ? `https://www.youtube-nocookie.com/embed/${yt}?autoplay=1&rel=0` : `https://player.vimeo.com/video/${vm}?autoplay=1&dnt=1`;
-      const thumb = yt ? ` style="background-image:url(https://i.ytimg.com/vi/${yt}/hqdefault.jpg)"` : '';
+      const poster = yt ? await youtubePoster(yt) : null;
+      const thumb = poster ? ` data-bg="${ROOT}media/${poster.src}"` : '';
       const label = esc(entry?.alt || 'Přehrát video');
       return `<figure class="video video-${s}"><button class="video-frame" data-embed="${esc(embed)}" aria-label="${label}"${thumb}><span class="play"></span></button>${cap}</figure>`;
     }
@@ -203,14 +227,17 @@ export async function renderSite({ model, media, outDir, cacheDir, warn, buildId
   // ---------- pages ----------
   // Footer: the client's text (default: © year + site name) and the platform credit, always.
   const footerText = model.site.footer || 'drobné: © {rok} {web}';
-  const credit = `<p class="platform-credit"><a href="https://filipmracek.com" target="_blank" rel="noopener">platform by filipmracek.com</a></p>`;
-  const footerHtml = `<footer class="site-foot" id="site-foot">${await renderContent(footerText, 'site › footer')}${credit}</footer>`;
+  const credit = `<a class="platform-credit" href="https://filipmracek.com" target="_blank" rel="noopener">platform by filipmracek.com</a>`;
+  let footLine = (await renderContent(footerText, 'site › footer')).trim();
+  footLine = /<\/p>$/.test(footLine) ? footLine.replace(/<\/p>$/, ` · ${credit}</p>`) : `${footLine}<p>${credit}</p>`;
+  const footerHtml = `<footer class="site-foot" id="site-foot">${footLine}</footer>`;
+  const pageFoot = `<footer class="page-foot">${footLine}</footer>`;
   const articles = [];
   for (const [i, p] of model.pages.entries()) {
     const body = await renderContent(p.content, `pages › ${p.id}`);
     articles.push({
       page: p,
-      html: `<article class="page" id="p-${p.id}" data-id="${p.id}" style="--h:${p.hue}" aria-labelledby="t-${p.id}"><div class="scroll"><div class="inner"><h1 id="t-${p.id}">${inline(p.title)}</h1>\n${body}</div></div></article>`,
+      html: `<article class="page" id="p-${p.id}" data-id="${p.id}" style="--h:${p.hue}" aria-labelledby="t-${p.id}"><div class="scroll"><div class="inner"><h1 id="t-${p.id}">${inline(p.title)}</h1>\n${body}\n${pageFoot}</div></div></article>`,
     });
   }
 
@@ -238,7 +265,7 @@ export async function renderSite({ model, media, outDir, cacheDir, warn, buildId
     `--f-body:"${str(st.font_body).replace(/"/g, '')}", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif`,
     `--f-mono:"${str(st.font_utility).replace(/"/g, '')}", ui-monospace, "SF Mono", Menlo, monospace`,
   ].join(';');
-  const fonts = await fontLinks([st.font_display, st.font_body, st.font_utility]);
+  const fonts = await fontHead({ families: [st.font_display, st.font_body, st.font_utility], outDir, cacheDir, root: ROOT, warn });
 
   const config = {
     home: model.site.home,
@@ -298,7 +325,6 @@ export async function renderSite({ model, media, outDir, cacheDir, warn, buildId
       desc && `<meta property="og:description" content="${esc(desc)}">`,
       share && `<meta property="og:image" content="${share}"><meta name="twitter:card" content="summary_large_image">`,
       canonical && `<meta property="og:url" content="${canonical}">`,
-      '<meta name="theme-color" content="#06070c">',
       is404 && '<meta name="robots" content="noindex">',
       iconTags,
       fonts,
@@ -351,30 +377,6 @@ ${footerHtml}
 function mediaFile(model, media, ref) {
   const entry = model.media.get(ref);
   return media.find(entry ? entry.source : ref);
-}
-
-// Google Fonts: one link per family, so a family that lacks a weight never
-// breaks the others. When the network is available, check the weighted URL
-// and fall back to the plain family if Google rejects it.
-async function fontLinks(families) {
-  const body = str(families[1]);
-  const names = [...new Set(families.map(f => str(f)).filter(Boolean))];
-  const links = [];
-  for (const name of names) {
-    const fam = encodeURIComponent(name).replace(/%20/g, '+');
-    const weighted = name === body ? `https://fonts.googleapis.com/css2?family=${fam}:wght@400;600&display=swap` : null;
-    const plain = `https://fonts.googleapis.com/css2?family=${fam}&display=swap`;
-    let href = weighted || plain;
-    if (weighted) {
-      try {
-        const r = await fetch(weighted, { signal: AbortSignal.timeout(4000) });
-        if (!r.ok) href = plain;
-      } catch { /* offline: keep weighted */ }
-    }
-    links.push(`<link rel="stylesheet" href="${href}">`);
-  }
-  if (!links.length) return '';
-  return '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n' + links.join('\n');
 }
 
 export { STYLES };

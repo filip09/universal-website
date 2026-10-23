@@ -16,8 +16,9 @@ a{color:hsl(var(--h,265),var(--sat),80%);text-underline-offset:3px;text-decorati
 a:hover{color:#fff}
 :focus-visible{outline:2px solid hsl(var(--h,265),var(--sat),75%);outline-offset:3px;border-radius:4px}
 
-#field{position:fixed;inset:0;width:100%;height:100%;display:block}
-.grain{position:fixed;inset:0;pointer-events:none;opacity:.07;mix-blend-mode:overlay;
+/* the background reaches past the screen edges, so phone toolbars and the status bar sit on colour, not black */
+#field{position:fixed;left:0;top:-12vh;width:100%;height:calc(100lvh + 24vh);display:block}
+.grain{position:fixed;left:0;right:0;top:-12vh;height:calc(100lvh + 24vh);pointer-events:none;opacity:.07;mix-blend-mode:overlay;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
 
 /* stage and pages */
@@ -120,15 +121,14 @@ figcaption{font-size:.85em;color:var(--muted);margin-top:8px}
 .faq-a{padding:0 4px 20px;display:flex;flex-direction:column;gap:12px;animation:faq-in .45s cubic-bezier(.2,.9,.3,1)}
 @keyframes faq-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 .card picture{display:block;grid-column:1/-1}
-/* footer: on the ground under the stack, the same on every page */
-.site-foot{position:fixed;left:0;right:0;bottom:0;z-index:4;display:flex;flex-wrap:wrap;justify-content:center;align-items:baseline;gap:2px 18px;text-align:center;
-  padding:12px max(16px, env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px, env(safe-area-inset-left,0px));
-  font-size:12.5px;line-height:1.5;color:rgba(236,233,244,.78);text-shadow:0 1px 10px rgba(0,0,0,.55)}
-.site-foot p{margin:0;max-width:none;font-size:inherit;color:inherit}
-.site-foot a{color:inherit}
-.platform-credit{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.05em}
-.platform-credit a{color:rgba(236,233,244,.9);text-decoration:none;border-bottom:1px solid rgba(236,233,244,.3);transition:color .2s, border-color .2s}
-.platform-credit a:hover{color:#fff;border-color:#fff}
+/* footer: one quiet line. Desktop: on the ground under the stack. Phone: at the very end of each page. */
+.site-foot,.page-foot{font-size:12px;line-height:1.5;color:rgba(236,233,244,.62)}
+.site-foot p,.page-foot p{margin:0;max-width:none;font-size:inherit;color:inherit}
+.site-foot a,.page-foot a{color:inherit;text-decoration:none}
+.site-foot a:hover,.page-foot a:hover{color:#fff}
+.site-foot{position:fixed;left:0;right:0;bottom:0;z-index:4;text-align:center;text-shadow:0 1px 10px rgba(0,0,0,.55);
+  padding:10px max(16px, env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px, env(safe-area-inset-left,0px))}
+.page-foot{display:none}
 
 /* bookmarks */
 .marks{position:fixed;top:96px;left:calc(50% + var(--pw) / 2 - 2px);display:flex;flex-direction:column;gap:8px;z-index:5}
@@ -148,8 +148,9 @@ figcaption{font-size:.85em;color:var(--muted);margin-top:8px}
 
 @media (max-width:760px){
   :root{--pw:calc(100vw - 16px)}
-  .stack{top:calc(var(--mh,52px) + 2px);bottom:calc(var(--fh,56px) + 2px)}
-  .site-foot{font-size:11.5px;gap:0 14px;padding-top:8px}
+  .stack{top:calc(var(--mh,52px) + 2px);bottom:calc(8px + env(safe-area-inset-bottom,0px))}
+  .site-foot{display:none}
+  .page-foot{display:block;margin-top:72px!important;font-size:11px;text-align:center;color:rgba(236,233,244,.5)}
   .page{border-radius:min(var(--radius),18px)}
   .scroll{padding-block:32px 48px;padding-left:max(20px, env(safe-area-inset-left,0px));padding-right:max(20px, env(safe-area-inset-right,0px))}
   .img-full figcaption{padding-inline:20px}

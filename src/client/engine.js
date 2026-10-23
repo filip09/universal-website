@@ -39,12 +39,14 @@
     hydrated.add(p);
     p.querySelectorAll('[data-srcset]').forEach(el => { el.srcset = absSet(el.dataset.srcset); el.removeAttribute('data-srcset'); });
     p.querySelectorAll('img[data-src]').forEach(el => { el.src = abs(el.dataset.src); el.removeAttribute('data-src'); });
+    p.querySelectorAll('[data-bg]').forEach(el => { el.style.backgroundImage = `url("${abs(el.dataset.bg)}")`; el.removeAttribute('data-bg'); });
   }
   pages.forEach(p => {
     if (!p.classList.contains('is-front')) return;
     hydrated.add(p);
     p.querySelectorAll('[srcset]').forEach(el => { el.srcset = absSet(el.getAttribute('srcset')); });
     p.querySelectorAll('img[src]').forEach(el => { el.src = abs(el.getAttribute('src')); });
+    p.querySelectorAll('[data-bg]').forEach(el => { el.style.backgroundImage = `url("${abs(el.dataset.bg)}")`; el.removeAttribute('data-bg'); });
   });
   marks.forEach(m => { m.href = urlOf(m.dataset.id); });
 
@@ -272,7 +274,7 @@
   ];
   const mode = cfg.bg.mode;
   const animate = mode === 'drift' && !reduce;
-  let fLast = 0; const t0 = performance.now();
+  let fLast = 0, lastRootHue = -1; const t0 = performance.now();
   function draw(ts) {
     const dt = Math.min(.2, (ts - fLast) / 1000 || .03); fLast = ts;
     const dh = ((field.targetHue - field.hue + 540) % 360) - 180;
@@ -280,6 +282,9 @@
     const s = animate ? (ts - t0) / 1000 * cfg.bg.speed : 0;
     const drift = animate ? Math.sin(s / 40) * 25 : 0;
     const Wc = cv.width, Hc = cv.height;
+    // the page colour behind phone toolbars and overscroll follows the background
+    const rootHue = Math.round(field.hue);
+    if (rootHue !== lastRootHue) { lastRootHue = rootHue; document.documentElement.style.backgroundColor = `hsl(${(rootHue + 10) % 360},38%,11%)`; }
     ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = `hsl(${(field.hue + 10) % 360},35%,5%)`;
     ctx.fillRect(0, 0, Wc, Hc);

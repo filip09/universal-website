@@ -1,5 +1,7 @@
 name: Publikovat web
 
+# Runs when someone clicks "Web → Publikovat" in a client sheet (via the control
+# sheet's script), or manually from the Actions tab.
 on:
   repository_dispatch:
     types: [publish]
@@ -27,11 +29,15 @@ jobs:
       SHEET: ${{ github.event.client_payload.sheet }}
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
+
       - run: npm ci --no-audit --no-fund
+
+      # Processed images are kept between runs, so only new images are optimised.
       - uses: actions/cache@v4
         with:
           path: .cache
@@ -39,6 +45,7 @@ jobs:
           restore-keys: |
             media-${{ env.TARGET || env.SHEET }}-
             media-
+
       - name: Publikovat
         run: |
           if [ -n "$SHEET" ]; then

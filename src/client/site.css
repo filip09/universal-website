@@ -135,14 +135,14 @@ figcaption{font-size:.85em;color:var(--muted);margin-top:8px}
 .mark{display:block;text-decoration:none;font:600 15px/1.25 var(--f-body);letter-spacing:.01em;color:#fff;text-align:left;text-shadow:0 1px 3px rgba(0,0,0,.35);
   padding:15px 24px 15px 18px;min-width:160px;max-width:220px;border-radius:0 12px 12px 0;
   background:linear-gradient(90deg, hsla(var(--h),58%,38%,.94), hsla(var(--h),52%,30%,.9));
-  border-left:4px solid hsl(var(--h),85%,72%);
+  border-left:4px solid hsl(var(--h),60%,20%);
   transform:translateX(-8px);opacity:.9;
   transition:transform .55s cubic-bezier(.2,1.4,.4,1), opacity .3s, background .3s, box-shadow .3s;box-shadow:6px 8px 24px -10px rgba(0,0,0,.6)}
 .mark:hover{transform:translateX(0);opacity:1;color:#fff;background:linear-gradient(90deg, hsla(var(--h),62%,43%,.96), hsla(var(--h),56%,34%,.92))}
 .mark[aria-current="page"]{transform:translateX(6px);opacity:1;background:linear-gradient(90deg, hsla(var(--h),68%,48%,.98), hsla(var(--h),62%,40%,.95));
   box-shadow:6px 8px 24px -10px rgba(0,0,0,.6), 0 0 28px -6px hsla(var(--h),85%,60%,.65)}
 .tabs-left .marks{left:auto;right:calc(50% + var(--pw) / 2 - 2px);align-items:flex-end}
-.tabs-left .mark{border-left:0;border-right:3px solid hsl(var(--h),var(--sat),65%);border-radius:10px 0 0 10px;text-align:right;transform:translateX(10px)}
+.tabs-left .mark{border-left:0;border-right:4px solid hsl(var(--h),60%,20%);border-radius:10px 0 0 10px;text-align:right;transform:translateX(10px)}
 .tabs-left .mark:hover{transform:translateX(0)}
 .tabs-left .mark[aria-current="page"]{transform:translateX(-4px)}
 
@@ -166,7 +166,7 @@ figcaption{font-size:.85em;color:var(--muted);margin-top:8px}
   .img-full figcaption{padding-inline:20px}
   .marks,.tabs-left .marks{top:0;left:0;right:0;bottom:auto;flex-direction:row;flex-wrap:wrap;gap:6px 5px;align-items:flex-end;
     padding:calc(8px + env(safe-area-inset-top,0px)) max(10px, env(safe-area-inset-right,0px)) 0 max(10px, env(safe-area-inset-left,0px))}
-  .mark,.tabs-left .mark{min-width:0;max-width:none;flex:1 1 auto;text-align:center;font-size:14px;border:0;border-bottom:3px solid hsl(var(--h),85%,72%);border-radius:10px 10px 0 0;
+  .mark,.tabs-left .mark{min-width:0;max-width:none;flex:1 1 auto;text-align:center;font-size:14px;border:0;border-bottom:3px solid hsl(var(--h),60%,20%);border-radius:10px 10px 0 0;
     transform:translateY(-3px);padding:11px 14px 10px;opacity:.9}
   .mark:hover,.tabs-left .mark:hover{transform:translateY(-3px)}
   .mark[aria-current="page"],.tabs-left .mark[aria-current="page"]{transform:translateY(0);opacity:1}

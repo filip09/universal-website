@@ -102,12 +102,37 @@
     try { history.pushState({ id: pages[j].dataset.id }, '', urlOf(pages[j].dataset.id)); } catch (e) {}
   }
 
-  // On phones the document scrolls; a turn always starts from the top of the page.
+  // On phones the document scrolls. Before a turn, the page glides back to its top,
+  // so the turn always happens where the reader can see it.
   const phone = matchMedia('(max-width: 760px)');
   const toTop = () => { if (phone.matches && window.scrollY > 0) window.scrollTo({ top: 0, behavior: 'instant' }); };
+  let glide = null;
+  function glideToTopThen(fn) {
+    const y0 = window.scrollY;
+    if (!phone.matches || y0 <= 1 || reduce) { toTop(); fn(); return; }
+    if (glide) { glide.fn = fn; return; }            // already gliding: just change where we go after
+    const dur = Math.min(800, 320 + y0 * 0.2), t0 = performance.now();
+    glide = { fn };
+    const step = now => {
+      const t = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - t, 3);
+      window.scrollTo(0, Math.round(y0 * (1 - e)));
+      if (t < 1) requestAnimationFrame(step);
+      else { const f = glide.fn; glide = null; f(); }
+    };
+    requestAnimationFrame(step);
+  }
 
   function go(j, push = true) {
     j = Math.max(0, Math.min(N - 1, j));
+    if (phone.matches && window.scrollY > 1 && (j !== cur || nav)) {
+      setMark(j);                                    // the tab answers at once, the turn follows the glide
+      glideToTopThen(() => turnTo(j, push));
+      return;
+    }
+    turnTo(j, push);
+  }
+
+  function turnTo(j, push) {
     if (j !== cur || nav) toTop();
     if (!nav && j === cur && Math.abs(focus.x - j) < .01) return;
     if (nav && nav.to === j) return;
@@ -225,14 +250,24 @@
   stage.addEventListener('pointermove', e => {
     if (!pt || e.pointerId !== pt.id) return;
     const dx = e.clientX - pt.x, dy = e.clientY - pt.y;
-    if (!pt.lock && Math.hypot(dx, dy) > 10) { pt.lock = Math.abs(dx) > Math.abs(dy) * 1.2 ? 'x' : 'y'; if (pt.lock === 'x') scrubStart(); }
+    if (!pt.lock && Math.hypot(dx, dy) > 10) {
+      pt.lock = Math.abs(dx) > Math.abs(dy) * 1.2 ? 'x' : 'y';
+      if (pt.lock === 'x' && phone.matches && window.scrollY > 40) pt.lock = 'swipe';
+      if (pt.lock === 'x') scrubStart();
+    }
+    if (pt.lock === 'swipe') { pt.dx = dx; return; }
     if (pt.lock === 'x') {
       const dtm = Math.max(1, e.timeStamp - pt.lt);
       pt.v = (e.clientX - pt.lx) / dtm; pt.lx = e.clientX; pt.lt = e.timeStamp;
       scrubMove(dx);
     }
   });
-  const endPt = e => { if (pt && e.pointerId === pt.id) { if (pt.lock === 'x') scrubEnd(-pt.v * 1.6); pt = null; } };
+  const endPt = e => {
+    if (!pt || e.pointerId !== pt.id) return;
+    if (pt.lock === 'x') scrubEnd(-pt.v * 1.6);
+    if (pt.lock === 'swipe' && Math.abs(pt.dx || 0) > 60) go((nav ? nav.to : cur) + (pt.dx < 0 ? 1 : -1));
+    pt = null;
+  };
   stage.addEventListener('pointerup', endPt);
   stage.addEventListener('pointercancel', endPt);
 

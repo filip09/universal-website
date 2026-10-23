@@ -262,7 +262,7 @@
   try { const ro = new ResizeObserver(setMh); ro.observe(marksEl); if (footEl) ro.observe(footEl); } catch (e) { addEventListener('resize', setMh); }
 
   // ---------- background: a tiny canvas, scaled up ----------
-  const cv = document.getElementById('field'), ctx = cv.getContext('2d');
+  const cv = document.getElementById('field'), ctx = cv.getContext('2d', { willReadFrequently: true });
   cv.width = 96; cv.height = 60;
   const startHue = cfg.pages[cur].hue;
   const field = { hue: startHue, targetHue: startHue };
@@ -274,7 +274,29 @@
   ];
   const mode = cfg.bg.mode;
   const animate = mode === 'drift' && !reduce;
-  let fLast = 0, lastRootHue = -1; const t0 = performance.now();
+  let fLast = 0, frame = 0; const t0 = performance.now();
+  // Phone browsers paint the strips under the status bar and the toolbar themselves,
+  // from the page's background colour and from fixed elements touching those edges.
+  // We sample the canvas at the visible top and bottom and colour those strips to match.
+  const edgeTop = document.getElementById('edge-top'), edgeBottom = document.getElementById('edge-bottom');
+  const rootStyle = document.documentElement.style;
+  function rowColor(y) {
+    const d = ctx.getImageData(0, y, cv.width, 1).data;
+    let r = 0, g = 0, b = 0; const n = d.length / 4;
+    for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i + 1]; b += d[i + 2]; }
+    return [r / n, g / n, b / n];
+  }
+  const rgb = c => `rgb(${c.map(v => Math.round(v)).join(',')})`;
+  function paintEdges() {
+    try {
+      // the canvas overhangs the screen by 12vh of its 124vh height at each end
+      const off = Math.round(cv.height * 12 / 124);
+      const top = rowColor(off + 1), bottom = rowColor(cv.height - off - 2);
+      if (edgeTop) edgeTop.style.backgroundColor = rgb(top);
+      if (edgeBottom) edgeBottom.style.backgroundColor = rgb(bottom);
+      rootStyle.backgroundColor = rgb(top.map((v, i) => (v + bottom[i]) / 2));
+    } catch (e) {}
+  }
   function draw(ts) {
     const dt = Math.min(.2, (ts - fLast) / 1000 || .03); fLast = ts;
     const dh = ((field.targetHue - field.hue + 540) % 360) - 180;
@@ -282,9 +304,6 @@
     const s = animate ? (ts - t0) / 1000 * cfg.bg.speed : 0;
     const drift = animate ? Math.sin(s / 40) * 25 : 0;
     const Wc = cv.width, Hc = cv.height;
-    // the page colour behind phone toolbars and overscroll follows the background
-    const rootHue = Math.round(field.hue);
-    if (rootHue !== lastRootHue) { lastRootHue = rootHue; document.documentElement.style.backgroundColor = `hsl(${(rootHue + 10) % 360},38%,11%)`; }
     ctx.globalCompositeOperation = 'source-over';
     ctx.fillStyle = `hsl(${(field.hue + 10) % 360},35%,5%)`;
     ctx.fillRect(0, 0, Wc, Hc);
@@ -301,6 +320,7 @@
         ctx.fillStyle = g; ctx.fillRect(0, 0, Wc, Hc);
       });
     }
+    if (frame++ % 6 === 0) paintEdges();
     return Math.abs(dh) > .5;
   }
   let fieldPrev = 0;

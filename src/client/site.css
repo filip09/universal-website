@@ -21,6 +21,11 @@ a:hover{color:#fff}
 .grain{position:fixed;left:0;right:0;top:-12vh;height:calc(100lvh + 24vh);pointer-events:none;opacity:.07;mix-blend-mode:overlay;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
 
+/* colour strips under the phone status bar and toolbar, coloured from the background by the engine */
+.edge{position:fixed;left:0;right:0;pointer-events:none;z-index:0}
+#edge-top{top:0;height:calc(env(safe-area-inset-top,0px) + 1px)}
+#edge-bottom{bottom:0;height:calc(env(safe-area-inset-bottom,0px) + 1px)}
+
 /* stage and pages */
 .stage{position:fixed;inset:0;perspective:2200px;perspective-origin:50% 45%}
 .stack{position:absolute;left:50%;top:max(32px, env(safe-area-inset-top,0px));bottom:calc(var(--fh,44px) + 4px);width:var(--pw);margin-left:calc(var(--pw) / -2);transform-style:preserve-3d;will-change:transform}

@@ -102,8 +102,13 @@
     try { history.pushState({ id: pages[j].dataset.id }, '', urlOf(pages[j].dataset.id)); } catch (e) {}
   }
 
+  // On phones the document scrolls; a turn always starts from the top of the page.
+  const phone = matchMedia('(max-width: 760px)');
+  const toTop = () => { if (phone.matches && window.scrollY > 0) window.scrollTo({ top: 0, behavior: 'instant' }); };
+
   function go(j, push = true) {
     j = Math.max(0, Math.min(N - 1, j));
+    if (j !== cur || nav) toTop();
     if (!nav && j === cur && Math.abs(focus.x - j) < .01) return;
     if (nav && nav.to === j) return;
     nav = { to: j, lifted: reduce || ANGLE === 0 || tilt.x > .55 || !!(nav && nav.lifted) };
@@ -195,7 +200,7 @@
 
   const stage = document.getElementById('stage');
   const W = () => stack.getBoundingClientRect().width || innerWidth;
-  function scrubStart() { scrub = { f0: focus.x, dx: 0 }; nav = null; kick(); }
+  function scrubStart() { toTop(); scrub = { f0: focus.x, dx: 0 }; nav = null; kick(); }
   function scrubMove(dx) {
     scrub.dx = dx;
     focus.x = Math.max(-.35, Math.min(N - .65, scrub.f0 - dx / (W() * .55))); focus.v = 0;
@@ -275,10 +280,7 @@
   const mode = cfg.bg.mode;
   const animate = mode === 'drift' && !reduce;
   let fLast = 0, frame = 0; const t0 = performance.now();
-  // Phone browsers paint the strips under the status bar and the toolbar themselves,
-  // from the page's background colour and from fixed elements touching those edges.
-  // We sample the canvas at the visible top and bottom and colour those strips to match.
-  const edgeTop = document.getElementById('edge-top'), edgeBottom = document.getElementById('edge-bottom');
+  // The page colour (seen during overscroll and while phone toolbars move) follows the background.
   const rootStyle = document.documentElement.style;
   function rowColor(y) {
     const d = ctx.getImageData(0, y, cv.width, 1).data;
@@ -286,15 +288,12 @@
     for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i + 1]; b += d[i + 2]; }
     return [r / n, g / n, b / n];
   }
-  const rgb = c => `rgb(${c.map(v => Math.round(v)).join(',')})`;
   function paintEdges() {
     try {
       // the canvas overhangs the screen by 12vh of its 124vh height at each end
       const off = Math.round(cv.height * 12 / 124);
       const top = rowColor(off + 1), bottom = rowColor(cv.height - off - 2);
-      if (edgeTop) edgeTop.style.backgroundColor = rgb(top);
-      if (edgeBottom) edgeBottom.style.backgroundColor = rgb(bottom);
-      rootStyle.backgroundColor = rgb(top.map((v, i) => (v + bottom[i]) / 2));
+      rootStyle.backgroundColor = `rgb(${top.map((v, i) => Math.round((v + bottom[i]) / 2)).join(',')})`;
     } catch (e) {}
   }
   function draw(ts) {

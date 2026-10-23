@@ -340,7 +340,7 @@ export async function renderSite({ model, media, outDir, cacheDir, warn, buildId
 ${head}
 </head>
 <body${bodyCls} data-front="${p.id}" data-root="${ROOT}" data-build="${buildId}">
-<canvas id="field" aria-hidden="true"></canvas><div class="grain" aria-hidden="true"></div><div class="edge" id="edge-top" aria-hidden="true"></div><div class="edge" id="edge-bottom" aria-hidden="true"></div>
+<canvas id="field" aria-hidden="true"></canvas><div class="grain" aria-hidden="true"></div>
 <main class="stage" id="stage"><div class="stack" id="stack">
 ${stack}
 </div></main>

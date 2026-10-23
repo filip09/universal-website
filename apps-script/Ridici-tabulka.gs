@@ -150,7 +150,7 @@ function prepare_(client, folder, sheetId) {
     let row = values.indexOf('publikovat') + 1;
     if (!row) { row = site.getLastRow() + 1; site.getRange(row, 1).setValue('publikovat'); }
     // a rich-text link works in every spreadsheet locale (formulas differ between , and ;)
-    site.getRange(row, 2).setRichTextValue(SpreadsheetApp.newRichTextValue().setText('▶ Publikovat web').setLinkUrl(url).build());
+    site.getRange(row, 2).clearContent().setRichTextValue(SpreadsheetApp.newRichTextValue().setText('▶ Publikovat web').setLinkUrl(url).build());
     site.getRange(row, 3).setValue('Klikněte, až budete hotovi s úpravami. Web je pak za minutu online.');
   }
 }

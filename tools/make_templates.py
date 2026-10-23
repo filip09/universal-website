@@ -248,7 +248,7 @@ table(["obsah", "", "styly", "co znamenají"], [
     ("obrázek", "", "inset / full", "full = přes celou šířku stránky"),
     ("galerie", "", "grid / row", "row = řada, která se posouvá do strany"),
     ("video", "", "normal / wide", ""),
-    ("seznam", "", "steps / cards / bullets", "steps čísluje karty podle order; cards bez čísel"),
+    ("seznam", "", "steps / cards / bullets / faq", "steps čísluje karty podle order; cards bez čísel; faq = rozbalovací otázky (title = otázka, text = odpověď)"),
 ])
 
 section("Formátování textu")

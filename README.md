@@ -34,6 +34,7 @@ Weby, kterými se listuje jako knihou. Obsah píšete v Google Sheets, obrázky 
 | `templates/` | Šablona tabulky klienta a řídicí tabulky (.xlsx k importu do Google Sheets) |
 | `.github/workflows/` | Automatické publikování na GitHubu |
 | `examples/media/` | Ukázkové obrázky pro místní zkoušku |
+| `examples/fyzioterapie/` | Ukázkový web fyzioterapeutky: vyplněná tabulka a zástupné obrázky |
 | `NAVOD-NASTAVENI.md` | Jednorázové nastavení účtů krok po kroku |
 
 ## Příkazy (pro vývoj)
@@ -42,6 +43,7 @@ Weby, kterými se listuje jako knihou. Obsah píšete v Google Sheets, obrázky 
 npm install
 npm run local                       # sestaví ukázkový web z templates/ do dist/demo
 npm test                            # testy obsahového jazyka
+node src/cli.js build --local examples/fyzioterapie/ladne-web.xlsx --media examples/fyzioterapie/media --out dist/ladne
 node src/cli.js publish --client X  # publikuje klienta X (potřebuje přístupy, viz návod)
 node src/cli.js check --client X    # jen kontrola, nic nenahraje
 ```

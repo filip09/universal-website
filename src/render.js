@@ -140,6 +140,11 @@ export async function renderSite({ model, media, outDir, cacheDir, warn, buildId
           const group = isToken(value) ? model.items.get(value) : null;
           if (group) {
             const s = style || 'steps';
+            if (s === 'faq') {
+              const qs = group.map(it => `<details class="faq-item"><summary><span>${inline(it.title)}</span><i aria-hidden="true"></i></summary><div class="faq-a">${paragraphs(it.text).map(p => `<p>${inline(p)}</p>`).join('')}${safeUrl(it.link) ? `<p><a href="${esc(safeUrl(it.link))}">Více →</a></p>` : ''}</div></details>`);
+              html.push(`<div class="faq">${qs.join('')}</div>`);
+              break;
+            }
             if (s === 'bullets') {
               html.push(`<ul class="bullets">${group.map(it => `<li>${it.title ? `<b>${inline(it.title)}</b> ` : ''}${inline(it.text)}</li>`).join('')}</ul>`);
               break;

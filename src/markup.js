@@ -29,7 +29,7 @@ export const STYLES = {
   image: ['inset', 'full'],
   gallery: ['grid', 'row'],
   video: ['normal', 'wide'],
-  list: ['steps', 'cards', 'bullets'],
+  list: ['steps', 'cards', 'bullets', 'faq'],
   embed: ['normal', 'full'],
 };
 

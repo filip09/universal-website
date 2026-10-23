@@ -226,15 +226,20 @@
   const stage = document.getElementById('stage');
   const W = () => stack.getBoundingClientRect().width || innerWidth;
   function scrubStart() { toTop(); scrub = { f0: focus.x, dx: 0 }; nav = null; kick(); }
+  // Sideways turning only reacts to a clear, deliberate movement:
+  // the first 24 px do nothing, and a turn needs a long drag or a quick flick.
+  const DEAD = 24;
   function scrubMove(dx) {
     scrub.dx = dx;
-    focus.x = Math.max(-.35, Math.min(N - .65, scrub.f0 - dx / (W() * .55))); focus.v = 0;
-    tilt.x = reduce || ANGLE === 0 ? 0 : Math.min(1, Math.abs(dx) / 140); tilt.v = 0;
+    const eff = Math.sign(dx) * Math.max(0, Math.abs(dx) - DEAD);
+    focus.x = Math.max(-.35, Math.min(N - .65, scrub.f0 - eff / (W() * .7))); focus.v = 0;
+    tilt.x = reduce || ANGLE === 0 ? 0 : Math.min(1, Math.abs(eff) / 160); tilt.v = 0;
   }
   function scrubEnd(vel = 0) {
     if (!scrub) return;
-    let target = Math.round(focus.x - vel * .25);
-    if (Math.abs(scrub.dx) > 40 && target === Math.round(scrub.f0)) target += scrub.dx < 0 ? 1 : -1;
+    const far = Math.abs(scrub.dx) > Math.max(100, W() * .3);
+    const flick = Math.abs(vel) > 1.2 && Math.abs(scrub.dx) > 90;
+    let target = Math.round(scrub.f0) + (far || flick ? (scrub.dx < 0 ? 1 : -1) : 0);
     target = Math.max(0, Math.min(N - 1, target));
     scrub = null;
     if (target === cur) { focus.t = cur; tilt.t = 0; kick(); }
@@ -245,17 +250,20 @@
   stage.addEventListener('pointerdown', e => {
     if (e.pointerType === 'mouse') return;
     if (e.target.closest('.gallery-row, iframe, video, input, textarea')) return;
-    pt = { id: e.pointerId, x: e.clientX, y: e.clientY, lock: null, lx: e.clientX, lt: e.timeStamp, v: 0 };
+    pt = { id: e.pointerId, x: e.clientX, y: e.clientY, lock: null, lx: e.clientX, lt: e.timeStamp, v: 0, dx: 0, dy: 0 };
   });
   stage.addEventListener('pointermove', e => {
     if (!pt || e.pointerId !== pt.id) return;
     const dx = e.clientX - pt.x, dy = e.clientY - pt.y;
-    if (!pt.lock && Math.hypot(dx, dy) > 10) {
-      pt.lock = Math.abs(dx) > Math.abs(dy) * 1.2 ? 'x' : 'y';
+    pt.dx = dx; pt.dy = dy;
+    if (!pt.lock && Math.hypot(dx, dy) > 14) {
+      // only a clearly horizontal start (within about 24° of level) counts as turning;
+      // anything else is scrolling for the rest of the gesture
+      pt.lock = Math.abs(dx) > Math.abs(dy) * 2.2 ? 'x' : 'y';
       if (pt.lock === 'x' && phone.matches && window.scrollY > 40) pt.lock = 'swipe';
       if (pt.lock === 'x') scrubStart();
     }
-    if (pt.lock === 'swipe') { pt.dx = dx; return; }
+    if (pt.lock === 'swipe') return;
     if (pt.lock === 'x') {
       const dtm = Math.max(1, e.timeStamp - pt.lt);
       pt.v = (e.clientX - pt.lx) / dtm; pt.lx = e.clientX; pt.lt = e.timeStamp;
@@ -265,18 +273,24 @@
   const endPt = e => {
     if (!pt || e.pointerId !== pt.id) return;
     if (pt.lock === 'x') scrubEnd(-pt.v * 1.6);
-    if (pt.lock === 'swipe' && Math.abs(pt.dx || 0) > 60) go((nav ? nav.to : cur) + (pt.dx < 0 ? 1 : -1));
+    if (pt.lock === 'swipe' && Math.abs(pt.dx) > 110 && Math.abs(pt.dx) > Math.abs(pt.dy) * 2.2) go((nav ? nav.to : cur) + (pt.dx < 0 ? 1 : -1));
     pt = null;
   };
   stage.addEventListener('pointerup', endPt);
   stage.addEventListener('pointercancel', endPt);
 
-  let wheelAcc = 0, wheelTimer = null;
+  // Trackpad: a sideways swipe must be clearly horizontal and travel a little before the page reacts.
+  let wheelAcc = 0, wheelTimer = null, wheelHint = 0, hintTimer = null;
   stage.addEventListener('wheel', e => {
-    if (!scrub && (Math.abs(e.deltaX) <= Math.abs(e.deltaY) * 1.5 || Math.abs(e.deltaX) < 1)) return;
-    if (!scrub && e.target.closest('.gallery-row')) return;
+    if (!scrub) {
+      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY) * 2.5 || Math.abs(e.deltaX) < 1) { wheelHint = 0; return; }
+      if (e.target.closest('.gallery-row')) return;
+      wheelHint += e.deltaX;
+      clearTimeout(hintTimer); hintTimer = setTimeout(() => { wheelHint = 0; }, 200);
+      if (Math.abs(wheelHint) < 40) return;
+    }
     e.preventDefault();
-    if (!scrub) { scrubStart(); wheelAcc = 0; }
+    if (!scrub) { scrubStart(); wheelAcc = -wheelHint; wheelHint = 0; }
     wheelAcc -= e.deltaX;
     scrubMove(wheelAcc);
     clearTimeout(wheelTimer);
@@ -284,6 +298,7 @@
   }, { passive: false });
 
   addEventListener('keydown', e => {
+    if (document.querySelector('.lightbox')) return;
     if (e.target.closest && e.target.closest('input,textarea,select,[contenteditable],iframe')) return;
     if (e.altKey || e.metaKey || e.ctrlKey) return;
     const at = nav ? nav.to : cur;
@@ -370,6 +385,83 @@
   // the year in footers stays current even if the site was built last year
   const year = String(new Date().getFullYear());
   document.querySelectorAll('.uw-year').forEach(el => { el.textContent = year; });
+
+  // ---------- photo zoom (galleries) ----------
+  // A tapped photo grows from exactly where it sits to the middle of the screen,
+  // and shrinks back to the same place when closed.
+  const EASE = 'cubic-bezier(.2,.8,.2,1)';
+  function bigSource(img) {
+    const pic = img.closest('picture');
+    const cur = img.currentSrc || img.src;
+    const ext = (cur.match(/\.(avif|webp|jpe?g|png)(\?|$)/i) || [])[1];
+    let best = null;
+    if (pic) for (const src of pic.querySelectorAll('source')) {
+      for (const part of (src.getAttribute('srcset') || '').split(',')) {
+        const [u, w] = part.trim().split(/\s+/);
+        if (!u || (ext && !u.toLowerCase().endsWith('.' + ext.toLowerCase()))) continue;
+        const width = parseInt(w, 10) || 0;
+        if (!best || width > best.w) best = { u: abs(u), w: width };
+      }
+    }
+    return best ? best.u : cur;
+  }
+  function openZoom(tile) {
+    const img = tile.querySelector('img');
+    if (!img || !img.complete || document.querySelector('.lightbox')) return;
+    const r0 = img.getBoundingClientRect();
+    const ratio = (img.naturalWidth || r0.width) / (img.naturalHeight || r0.height);
+    const vw = innerWidth, vh = window.visualViewport ? visualViewport.height : innerHeight;
+    let w = Math.min(vw * .92, 1400), h = w / ratio;
+    if (h > vh * .82) { h = vh * .82; w = h * ratio; }
+    const cap = tile.querySelector('figcaption');
+    const box = document.createElement('div');
+    box.className = 'lightbox';
+    box.innerHTML = '<div class="lb-back"></div><div class="lb-frame"><img alt=""></div>' + (cap ? '<p class="lb-cap"></p>' : '');
+    const frame = box.querySelector('.lb-frame'), big = frame.querySelector('img'), back = box.querySelector('.lb-back');
+    big.src = img.currentSrc || img.src; big.alt = img.alt || '';
+    if (cap) { const c = box.querySelector('.lb-cap'); c.textContent = cap.textContent; c.style.top = ((vh + h) / 2 + 12) + 'px'; }
+    const radius = getComputedStyle(img).borderRadius;
+    const from = { left: r0.left + 'px', top: r0.top + 'px', width: r0.width + 'px', height: r0.height + 'px', borderRadius: radius };
+    const to = { left: (vw - w) / 2 + 'px', top: (vh - h) / 2 + 'px', width: w + 'px', height: h + 'px', borderRadius: '12px' };
+    Object.assign(frame.style, to);
+    document.body.appendChild(box);
+    img.style.visibility = 'hidden';
+    const dur = reduce ? 0 : 460;
+    frame.animate([from, to], { duration: dur, easing: EASE });
+    back.animate([{ opacity: 0 }, { opacity: 1 }], { duration: dur, easing: 'ease-out' });
+    // swap in the largest version once it has loaded
+    const hi = bigSource(img);
+    if (hi && hi !== big.src) { const pre = new Image(); pre.src = hi; (pre.decode ? pre.decode() : Promise.resolve()).then(() => { big.src = hi; }).catch(() => {}); }
+    let closing = false;
+    function close() {
+      if (closing) return; closing = true;
+      const r1 = img.getBoundingClientRect();
+      const back0 = { left: r1.left + 'px', top: r1.top + 'px', width: r1.width + 'px', height: r1.height + 'px', borderRadius: radius };
+      const d = reduce ? 0 : 380;
+      const cs = box.querySelector('.lb-cap'); if (cs) cs.remove();
+      back.animate([{ opacity: 1 }, { opacity: 0 }], { duration: d, easing: 'ease-in', fill: 'forwards' });
+      const a = frame.animate([to, back0], { duration: d, easing: EASE, fill: 'forwards' });
+      const done = () => { img.style.visibility = ''; box.remove(); removeEventListener('keydown', onKey); removeEventListener('scroll', close); };
+      a.onfinish = done; if (!d) done();
+    }
+    const onKey = e => { if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); close(); } };
+    box.addEventListener('click', close);
+    addEventListener('keydown', onKey);
+    addEventListener('scroll', close, { passive: true });
+  }
+  stack.addEventListener('click', e => {
+    const tile = e.target.closest('.gallery .tile');
+    if (!tile || tile.querySelector('a')) return;
+    e.preventDefault();
+    openZoom(tile);
+  });
+  stack.addEventListener('keydown', e => {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.gallery .tile')) { e.preventDefault(); openZoom(e.target); }
+  });
+  stack.querySelectorAll('.gallery .tile').forEach(t => {
+    if (t.querySelector('a')) return;
+    t.tabIndex = 0; t.setAttribute('role', 'button'); t.setAttribute('aria-label', 'Zvětšit fotku');
+  });
 
   // ---------- start ----------
   try { history.replaceState({ id: pages[cur].dataset.id }, ''); } catch (e) {}

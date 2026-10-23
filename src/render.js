@@ -201,19 +201,16 @@ export async function renderSite({ model, media, outDir, cacheDir, warn, buildId
   }
 
   // ---------- pages ----------
-  const total = model.pages.length;
-  const showFolio = !isNo(model.styles.show_folio);
   // Footer: the client's text (default: © year + site name) and the platform credit, always.
   const footerText = model.site.footer || 'drobné: © {rok} {web}';
   const credit = `<p class="platform-credit"><a href="https://filipmracek.com" target="_blank" rel="noopener">platform by filipmracek.com</a></p>`;
-  const footerHtml = `<footer class="page-foot">${await renderContent(footerText, 'site › footer')}${credit}</footer>`;
+  const footerHtml = `<footer class="site-foot" id="site-foot">${await renderContent(footerText, 'site › footer')}${credit}</footer>`;
   const articles = [];
   for (const [i, p] of model.pages.entries()) {
     const body = await renderContent(p.content, `pages › ${p.id}`);
-    const folio = showFolio ? `<div class="folio">${String(i + 1).padStart(2, '0')} / ${String(total).padStart(2, '0')}</div>` : '';
     articles.push({
       page: p,
-      html: `<article class="page" id="p-${p.id}" data-id="${p.id}" style="--h:${p.hue}" aria-labelledby="t-${p.id}"><div class="scroll"><div class="inner">${folio}<h1 id="t-${p.id}">${inline(p.title)}</h1>\n${body}\n${footerHtml}</div></div></article>`,
+      html: `<article class="page" id="p-${p.id}" data-id="${p.id}" style="--h:${p.hue}" aria-labelledby="t-${p.id}"><div class="scroll"><div class="inner"><h1 id="t-${p.id}">${inline(p.title)}</h1>\n${body}</div></div></article>`,
     });
   }
 
@@ -278,7 +275,7 @@ export async function renderSite({ model, media, outDir, cacheDir, warn, buildId
 
   const urlOf = id => (id === model.site.home ? '' : `${id}/`);
   const navHtml = model.pages.map((p, i) =>
-    `<a class="mark" href="${ROOT}${urlOf(p.id)}" data-id="${p.id}" style="--h:${p.hue}"><small>${String(i + 1).padStart(2, '0')}</small>${esc(p.label)}</a>`).join('');
+    `<a class="mark" href="${ROOT}${urlOf(p.id)}" data-id="${p.id}" style="--h:${p.hue}">${esc(p.label)}</a>`).join('');
 
   async function writePage(front, file, root, { is404 = false } = {}) {
     const p = front.page;
@@ -322,6 +319,7 @@ ${head}
 ${stack}
 </div></main>
 <nav class="marks" id="marks" aria-label="Stránky">${navHtml}</nav>
+${footerHtml}
 </body>
 </html>`;
     const full = path.join(outDir, file);

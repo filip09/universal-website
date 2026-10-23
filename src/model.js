@@ -20,7 +20,6 @@ export const STYLE_DEFAULTS = {
   turn_angle: 30,
   stack_depth: 5,
   tabs_desktop: 'right',
-  show_folio: 'yes',
 };
 
 const str = v => (v === undefined || v === null ? '' : String(v)).trim();

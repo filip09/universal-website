@@ -251,9 +251,13 @@
   addEventListener('popstate', () => { const id = idFromLocation(); go(id ? idx(id) : idx(cfg.home), false); });
 
   // phones: tabs on top wrap into rows; the page starts below them
-  const setMh = () => document.documentElement.style.setProperty('--mh', marksEl.offsetHeight + 'px');
+  const footEl = document.getElementById('site-foot');
+  const setMh = () => {
+    document.documentElement.style.setProperty('--mh', marksEl.offsetHeight + 'px');
+    if (footEl) document.documentElement.style.setProperty('--fh', footEl.offsetHeight + 'px');
+  };
   setMh();
-  try { new ResizeObserver(setMh).observe(marksEl); } catch (e) { addEventListener('resize', setMh); }
+  try { const ro = new ResizeObserver(setMh); ro.observe(marksEl); if (footEl) ro.observe(footEl); } catch (e) { addEventListener('resize', setMh); }
 
   // ---------- background: a tiny canvas, scaled up ----------
   const cv = document.getElementById('field'), ctx = cv.getContext('2d');

@@ -166,7 +166,6 @@ sheet("styles", [("setting", 24), ("value", 16), ("možnosti", 26), ("co to děl
     ("turn_angle", 30, "0 – 45 (stupňů)", "Jak moc se stoh natočí bokem. 0 natočení vypne."),
     ("stack_depth", 5, "1 – 8", "Kolik stránek je při otáčení vidět za tou přední."),
     ("tabs_desktop", "right", "right / left", "Na které straně jsou záložky na počítači."),
-    ("show_folio", "yes", "yes / no", "Zobrazit malé číslo stránky (02 / 05) nahoře."),
 ], note_cols=(2, 3), tab="6B5BFF")
 
 # ---------- Guide (Czech) ----------

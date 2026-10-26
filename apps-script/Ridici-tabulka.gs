@@ -83,9 +83,9 @@ function prepareSelected() {
   if (!c) return;
   need_(['ROBOT_EMAIL', 'WEBAPP_URL']);
   const folder = DriveApp.getFolderById(idFrom_(c.folder));
-  const sheets = folder.getFilesByType(MimeType.GOOGLE_SHEETS);
-  if (!sheets.hasNext()) { SpreadsheetApp.getUi().alert('Ve složce klienta není žádná tabulka.'); return; }
-  prepare_(c.client, folder, sheets.next().getId());
+  const sheetId = sheetIn_(folder);
+  if (!sheetId) { SpreadsheetApp.getUi().alert('Ve složce klienta není žádná tabulka.'); return; }
+  prepare_(c.client, folder, sheetId);
   toast_('Složka je nasdílená robotovi a v tabulce klienta je odkaz Publikovat.');
 }
 
@@ -206,9 +206,9 @@ function formSite_(c) {
   const cache = CacheService.getScriptCache(), key = 'form_site_' + c.client;
   const hit = cache.get(key);
   if (hit) return JSON.parse(hit);
-  const files = DriveApp.getFolderById(idFrom_(c.folder)).getFilesByType(MimeType.GOOGLE_SHEETS);
-  if (!files.hasNext()) throw new Error('Ve složce webu není tabulka.');
-  const tab = SpreadsheetApp.openById(files.next().getId()).getSheetByName('site');
+  const sheetId = sheetIn_(DriveApp.getFolderById(idFrom_(c.folder)));
+  if (!sheetId) throw new Error('Ve složce webu není tabulka.');
+  const tab = SpreadsheetApp.openById(sheetId).getSheetByName('site');
   if (!tab) throw new Error('V tabulce webu chybí list site.');
   const set = {};
   tab.getRange(1, 1, Math.max(tab.getLastRow(), 1), 2).getValues().forEach(r => { set[String(r[0]).trim().toLowerCase()] = String(r[1]).trim(); });
@@ -272,6 +272,13 @@ function prepare_(client, folder, sheetId) {
     site.getRange(row, 2).clearContent().setRichTextValue(SpreadsheetApp.newRichTextValue().setText('▶ Publikovat web').setLinkUrl(url).build());
     site.getRange(row, 3).setValue('Klikněte, až budete hotovi s úpravami. Web je pak za minutu online.');
   }
+}
+
+/** The client's spreadsheet in its folder. Skips files in the trash, which Drive still lists in the folder. */
+function sheetIn_(folder) {
+  const it = folder.getFilesByType(MimeType.GOOGLE_SHEETS);
+  while (it.hasNext()) { const f = it.next(); if (!f.isTrashed()) return f.getId(); }
+  return null;
 }
 
 function clientForSheet_(sheetId) {

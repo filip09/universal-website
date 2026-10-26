@@ -3,6 +3,7 @@
 // client can read it in the "stav" tab of their own sheet.
 
 export const STYLE_DEFAULTS = {
+  color_profile: 'manual',
   background: 'drift',
   background_speed: 'slow',
   background_follows_page: 'yes',

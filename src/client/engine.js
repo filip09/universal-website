@@ -202,7 +202,7 @@
       activate(pages[front]);
       const pg = cfg.pages[front];
       document.title = pg.id === cfg.home ? cfg.siteName : `${pg.title} · ${cfg.siteName}`;
-      if (cfg.bg.follow) field.targetHue = pg.hue;
+      if (cfg.bg.follow) setFieldTarget(front);
     }
   }
 
@@ -317,19 +317,36 @@
   try { const ro = new ResizeObserver(setMh); ro.observe(marksEl); if (footEl) ro.observe(footEl); } catch (e) { addEventListener('resize', setMh); }
 
   // ---------- background: a tiny canvas, scaled up ----------
+  // Each page has a target: a base colour and four soft light blobs. The background
+  // drifts on its own and glides between targets as pages turn.
   const cv = document.getElementById('field'), ctx = cv.getContext('2d', { willReadFrequently: true });
   cv.width = 96; cv.height = 60;
-  const startHue = cfg.pages[cur].hue;
-  const field = { hue: startHue, targetHue: startHue };
+  const clone = f => ({ base: f.base.slice(), blobs: f.blobs.map(b => b.slice()), drift: f.drift });
+  const field = clone(cfg.pages[cur].field);
+  let fieldTarget = clone(cfg.pages[cur].field);
+  function setFieldTarget(i) { fieldTarget = clone(cfg.pages[i].field); }
   const blobs = [
-    { ax: .30, ay: .35, fx: .021, fy: .017, r: .55, dh: 0, a: .55 },
-    { ax: .72, ay: .62, fx: .015, fy: .023, r: .6, dh: 50, a: .45 },
-    { ax: .55, ay: .20, fx: .019, fy: .012, r: .45, dh: -60, a: .35 },
-    { ax: .18, ay: .80, fx: .011, fy: .019, r: .5, dh: 120, a: .3 },
+    { ax: .30, ay: .35, fx: .021, fy: .017, r: .55, a: .55, dir: 1 },
+    { ax: .72, ay: .62, fx: .015, fy: .023, r: .6, a: .45, dir: -1 },
+    { ax: .55, ay: .20, fx: .019, fy: .012, r: .45, a: .35, dir: 1 },
+    { ax: .18, ay: .80, fx: .011, fy: .019, r: .5, a: .3, dir: -1 },
   ];
   const mode = cfg.bg.mode;
   const animate = mode === 'drift' && !reduce;
   let fLast = 0, frame = 0; const t0 = performance.now();
+  const hueStep = (a, b, k) => { const d = ((b - a + 540) % 360) - 180; return (a + d * k + 360) % 360; };
+  function blend(k) {
+    let moving = 0;
+    const mix = (c, t) => {
+      const h = hueStep(c[0], t[0], k);
+      moving += Math.abs(((t[0] - c[0] + 540) % 360) - 180) + Math.abs(t[1] - c[1]) + Math.abs(t[2] - c[2]);
+      c[0] = h; c[1] += (t[1] - c[1]) * k; c[2] += (t[2] - c[2]) * k;
+    };
+    mix(field.base, fieldTarget.base);
+    field.blobs.forEach((b, i) => mix(b, fieldTarget.blobs[i]));
+    field.drift += (fieldTarget.drift - field.drift) * k;
+    return moving > .5;
+  }
   // The page colour (seen during overscroll and while phone toolbars move) follows the background.
   const rootStyle = document.documentElement.style;
   function rowColor(y) {
@@ -340,47 +357,127 @@
   }
   function paintEdges() {
     try {
-      // the canvas overhangs the screen by 12vh of its 124vh height at each end
-      const off = Math.round(cv.height * 12 / 124);
+      const off = Math.round(cv.height * 12 / 124);   // the canvas overhangs the screen by 12vh at each end
       const top = rowColor(off + 1), bottom = rowColor(cv.height - off - 2);
       rootStyle.backgroundColor = `rgb(${top.map((v, i) => Math.round((v + bottom[i]) / 2)).join(',')})`;
     } catch (e) {}
   }
+  let changing = true;
   function draw(ts) {
     const dt = Math.min(.2, (ts - fLast) / 1000 || .03); fLast = ts;
-    const dh = ((field.targetHue - field.hue + 540) % 360) - 180;
-    field.hue = (field.hue + dh * Math.min(1, dt * .9) + 360) % 360;
+    changing = blend(Math.min(1, dt * 1.1));
     const s = animate ? (ts - t0) / 1000 * cfg.bg.speed : 0;
-    const drift = animate ? Math.sin(s / 40) * 25 : 0;
-    const Wc = cv.width, Hc = cv.height;
+    const drift = animate ? Math.sin(s / 40) * field.drift : 0;
+    const Wc = cv.width, Hc = cv.height, B = field.base;
     ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = `hsl(${(field.hue + 10) % 360},35%,5%)`;
+    ctx.fillStyle = `hsl(${B[0]},${B[1]}%,${B[2]}%)`;
     ctx.fillRect(0, 0, Wc, Hc);
     if (mode !== 'solid') {
       ctx.globalCompositeOperation = 'lighter';
       blobs.forEach((b, i) => {
+        const c = field.blobs[i];
         const x = (b.ax + Math.sin(s * b.fx * 6.28 + i) * .18) * Wc;
         const y = (b.ay + Math.cos(s * b.fy * 6.28 + i * 2) * .16) * Hc;
         const r = b.r * Wc * (1 + Math.sin(s * .07 + i) * .12);
-        const h = (field.hue + b.dh + drift + 360) % 360;
+        const h = (c[0] + drift * b.dir + 360) % 360;
         const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-        g.addColorStop(0, `hsla(${h},70%,42%,${b.a})`);
-        g.addColorStop(1, `hsla(${h},70%,30%,0)`);
+        g.addColorStop(0, `hsla(${h},${c[1]}%,${c[2]}%,${b.a})`);
+        g.addColorStop(1, `hsla(${h},${c[1]}%,${Math.max(0, c[2] - 12)}%,0)`);
         ctx.fillStyle = g; ctx.fillRect(0, 0, Wc, Hc);
       });
     }
     if (frame++ % 6 === 0) paintEdges();
-    return Math.abs(dh) > .5;
   }
   let fieldPrev = 0;
   function fieldLoop(ts) {
     if (document.hidden) { requestAnimationFrame(fieldLoop); return; }
-    if (animate) { if (ts - fieldPrev >= 33) { fieldPrev = ts; draw(ts); } }
-    else if (Math.abs(((field.targetHue - field.hue + 540) % 360) - 180) > .5) draw(ts);
+    // while a page turns, the background redraws less often so the turn keeps every frame
+    if (animate) { if (ts - fieldPrev >= (running ? 80 : 33)) { fieldPrev = ts; draw(ts); } }
+    else if (changing) draw(ts);
     requestAnimationFrame(fieldLoop);
   }
   draw(performance.now());
   requestAnimationFrame(fieldLoop);
+
+  // ---------- themed layer: Tron grid, Matrix rain ----------
+  // Drawn at reduced resolution and frame rate. If a device struggles, it lowers its
+  // quality once, and if it still struggles it freezes into a still picture.
+  const fxc = document.getElementById('fx');
+  if (fxc && cfg.fx) (() => {
+    const fx = cfg.fx, fctx = fxc.getContext('2d');
+    let quality = 1, W = 0, H = 0, scale = 1, drops = [], fs = 16, last = 0, cost = 0, samples = 0, frozen = false, prevT = 0, gap = 16, slow = 0;
+    const glyphs = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワン0123456789'.split('');
+    const pick = () => glyphs[(Math.random() * glyphs.length) | 0];
+    function setup() {
+      const cw = fxc.clientWidth || innerWidth, ch = fxc.clientHeight || innerHeight;
+      scale = Math.min(1, 900 / cw) * (quality === 1 ? 1 : .6);
+      W = fxc.width = Math.max(1, Math.round(cw * scale));
+      H = fxc.height = Math.max(1, Math.round(ch * scale));
+      fs = Math.max(9, Math.round(16 * scale));
+      const cols = Math.floor(W / fs);
+      drops = Array.from({ length: cols }, () => (Math.random() < (quality === 1 ? .55 : .3) ? -Math.random() * H / fs : null));
+      fctx.clearRect(0, 0, W, H);
+      fxc.style.opacity = fx.kind === 'matrix' ? '.5' : '.85';
+    }
+    function tron(t) {
+      fctx.clearRect(0, 0, W, H);
+      const hz = H * .6, vx = W / 2, lines = 15, phase = (t / 1000 * .12) % 1;
+      const line = (x1, y1, x2, y2, a, w) => { fctx.globalAlpha = a; fctx.lineWidth = w; fctx.beginPath(); fctx.moveTo(x1, y1); fctx.lineTo(x2, y2); fctx.stroke(); };
+      fctx.strokeStyle = fx.accent;
+      for (let k = 0; k < lines; k++) {                       // rows rolling toward the viewer
+        const p = (k + phase) / lines, y = hz + (H - hz) * Math.pow(p, 2.3), a = .05 + p * .32;
+        line(0, y, W, y, a * .35, 3 * scale + 1); line(0, y, W, y, a, 1);
+      }
+      for (let i = -12; i <= 12; i++) {                       // lines running to the horizon
+        const xb = vx + i * W / 9, a = .28 - Math.abs(i) * .012;
+        line(vx + i * W / 90, hz, xb, H, a * .35, 3 * scale + 1); line(vx + i * W / 90, hz, xb, H, a, 1);
+      }
+      fctx.strokeStyle = fx.second;                           // a quiet orange horizon
+      line(0, hz, W, hz, .35, 1);
+      fctx.globalAlpha = 1;
+    }
+    function rain() {
+      fctx.globalCompositeOperation = 'destination-out';      // older characters fade away
+      fctx.fillStyle = 'rgba(0,0,0,.14)'; fctx.fillRect(0, 0, W, H);
+      fctx.globalCompositeOperation = 'source-over';
+      fctx.font = `${fs}px monospace`; fctx.textBaseline = 'top';
+      for (let c = 0; c < drops.length; c++) {
+        if (drops[c] === null) { if (Math.random() < .002) drops[c] = 0; continue; }
+        const y = drops[c] * fs;
+        if (y > -fs) {
+          fctx.fillStyle = fx.accent; fctx.globalAlpha = .9; fctx.fillText(pick(), c * fs, y);
+          fctx.fillStyle = fx.second; fctx.globalAlpha = .5; fctx.fillText(pick(), c * fs, y - fs);
+        }
+        drops[c] += 1;
+        if (y > H && Math.random() > .96) drops[c] = Math.random() < .7 ? -Math.random() * 20 : null;
+      }
+      fctx.globalAlpha = 1;
+    }
+    const step = fx.kind === 'matrix' ? 1000 / 14 : 1000 / 30;
+    function tick(t) {
+      // watch the real frame rate of the whole page; if it stays low, step down
+      if (prevT) gap = gap * .95 + (t - prevT) * .05;
+      prevT = t;
+      if (!running && !document.hidden && gap > 30) { if (++slow > 90) { slow = 0; gap = 16; if (quality === 1) { quality = .5; setup(); } else frozen = true; } }
+      else slow = 0;
+      if (!frozen && !running && !document.hidden && t - last >= step * (quality === 1 ? 1 : 1.5)) {
+        last = t;
+        const t1 = performance.now();
+        fx.kind === 'matrix' ? rain() : tron(t);
+        cost = cost * .9 + (performance.now() - t1) * .1;
+        if (++samples > 45 && cost > 6) {
+          samples = 0; cost = 0;
+          if (quality === 1) { quality = .5; setup(); } else frozen = true;
+        }
+      }
+      if (!frozen) requestAnimationFrame(tick);
+    }
+    setup();
+    if (reduce) { fx.kind === 'matrix' ? Array.from({ length: 40 }, rain) : tron(0); return; }
+    let rt = null;
+    addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(setup, 200); });
+    requestAnimationFrame(tick);
+  })();
 
   // the year in footers stays current even if the site was built last year
   const year = String(new Date().getFullYear());

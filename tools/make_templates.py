@@ -148,7 +148,10 @@ sheet("site", [("setting", 22), ("value", 46), ("co to dělá", 58)], [
 ], note_cols=(2,), tab="6B5BFF")
 
 # ---------- styles ----------
-sheet("styles", [("setting", 24), ("value", 16), ("možnosti", 26), ("co to dělá", 58)], [
+PROFILES = ["manual", "terakota", "jantar", "koral", "broskev", "karamel", "ruze", "vinova", "pisek",
+            "tron", "matrix", "soumrak", "zeme", "pastel", "sever"]
+styles_ws = sheet("styles", [("setting", 24), ("value", 16), ("možnosti", 26), ("co to dělá", 58)], [
+    ("color_profile", "manual", "roletka (viz Návod)", "Barevný profil webu. manual = barvy podle sloupce hue v pages a nastavení níže. Ostatní profily nastaví barvy samy."),
     ("background", "drift", "drift / still / solid", "drift: barvy se pomalu pohybují. still: stejné barvy bez pohybu. solid: jedna barva."),
     ("background_speed", "slow", "slow / normal", "Jak rychle se barvy pozadí mění."),
     ("background_follows_page", "yes", "yes / no", "Pozadí přebírá barvu stránky, která je vepředu."),
@@ -167,6 +170,10 @@ sheet("styles", [("setting", 24), ("value", 16), ("možnosti", 26), ("co to děl
     ("stack_depth", 5, "1 – 8", "Kolik stránek je při otáčení vidět za tou přední."),
     ("tabs_desktop", "right", "right / left", "Na které straně jsou záložky na počítači."),
 ], note_cols=(2, 3), tab="6B5BFF")
+_dv = DataValidation(type="list", formula1='"' + ",".join(PROFILES) + '"', allow_blank=False)
+_dv.error, _dv.errorTitle = "Vyberte jeden z nabízených profilů.", "Neznámý profil"
+styles_ws.add_data_validation(_dv)
+_dv.add("B2")
 
 # ---------- Guide (Czech) ----------
 g = wb.active
@@ -288,6 +295,26 @@ c.font, c.alignment, c.fill = CODE, TOP, CONTENT_FILL
 g.merge_cells(start_row=r, start_column=1, end_row=r, end_column=4)
 g.row_dimensions[r].height = 150
 r += 1
+
+section("Barevné profily (styles › color_profile)")
+para("V listu styles vyberte v řádku color_profile jeden profil. Pozadí zůstává živé a jemně proměnlivé, profil mu dává základní tón. Kromě manual profily nepoužívají sloupec hue ani barvy textu z listu styles.", 42)
+table(["profil", "", "jak působí", "barvy"], [
+    ("manual", "", "Barvu každé stránky určuje sloupec hue v listu pages.", "podle vás"),
+    ("terakota", "", "Jedna barva v odstínech. Teplá cihlová.", "#C8643B"),
+    ("jantar", "", "Jedna barva v odstínech. Medová, zlatavá.", "#D9932E"),
+    ("koral", "", "Jedna barva v odstínech. Svěží korálová.", "#E8715A"),
+    ("broskev", "", "Jedna barva v odstínech. Jemná broskvová.", "#E89B7A"),
+    ("karamel", "", "Jedna barva v odstínech. Karamelově hnědá.", "#B9773F"),
+    ("ruze", "", "Jedna barva v odstínech. Prášková růže.", "#C97B84"),
+    ("vinova", "", "Jedna barva v odstínech. Hluboká vínová.", "#9E3B5A"),
+    ("pisek", "", "Jedna barva v odstínech. Světlý písek.", "#C9A77A"),
+    ("tron", "", "Neonově azurová s oranžovou, ubíhající mřížka v pozadí.", "#00E5FF · #FF7A1A"),
+    ("matrix", "", "Fosforově zelená, jemně padající znaky v pozadí.", "#00FF41"),
+    ("soumrak", "", "Čtyři barvy se střídají po stránkách. Tlumená korálová, indigo, tyrkys, zlatá.", "#D98B6A #7C78C8 #5BA8A0 #D9B86C"),
+    ("zeme", "", "Čtyři barvy. Mech, okr, cihla, jezerní modrá.", "#8FBF6F #E9A23B #C9583E #4F86C6"),
+    ("pastel", "", "Čtyři barvy. Tlumená růžová, aqua, levandulová, světlá citronová.", "#D9A3B8 #9CCBCF #A3B4D9 #DCD9A8"),
+    ("sever", "", "Čtyři barvy. Severská modrá, šalvěj, pšeničná, tlumená červená.", "#88C0D0 #A3BE8C #EBCB8B #BF616A"),
+])
 
 section("Proměnné")
 para("Do kteréhokoli textu můžete napsat proměnnou ve složených závorkách. Web ji při sestavení nahradí.")

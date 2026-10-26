@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { parseCell, isToken, inline, paragraphs, escapeHtml as esc, safeUrl, STYLES, setVariables } from './markup.js';
 import { ImagePipeline } from './images.js';
 import { fontHead } from './fonts.js';
+import { resolveProfile } from './profiles.js';
 import { mkdir as mkdirp, readFile as readF, writeFile as writeF, stat as statF } from 'node:fs/promises';
 import { str, num, isNo } from './model.js';
 
@@ -232,12 +233,15 @@ export async function renderSite({ model, media, outDir, cacheDir, warn, buildId
   footLine = /<\/p>$/.test(footLine) ? footLine.replace(/<\/p>$/, ` · ${credit}</p>`) : `${footLine}<p>${credit}</p>`;
   const footerHtml = `<footer class="site-foot" id="site-foot">${footLine}</footer>`;
   const pageFoot = `<footer class="page-foot">${footLine}</footer>`;
+  // colour profile: decides page colours, tab shades, text colours and the background
+  const prof = resolveProfile(model.styles.color_profile, model.pages, { sat: num(model.styles.hue_saturation, 70), warn });
+  const colorStyle = i => { const c = prof.pages[i]; return `--h:${c.h};--sat:${c.s}%;--ts:${c.ts}%;--tl:${c.tl}%`; };
   const articles = [];
   for (const [i, p] of model.pages.entries()) {
     const body = await renderContent(p.content, `pages › ${p.id}`);
     articles.push({
       page: p,
-      html: `<article class="page" id="p-${p.id}" data-id="${p.id}" style="--h:${p.hue}" aria-labelledby="t-${p.id}"><div class="scroll"><div class="inner"><h1 id="t-${p.id}">${inline(p.title)}</h1>\n${body}\n${pageFoot}</div></div></article>`,
+      html: `<article class="page" id="p-${p.id}" data-id="${p.id}" style="${colorStyle(i)}" aria-labelledby="t-${p.id}"><div class="scroll"><div class="inner"><h1 id="t-${p.id}">${inline(p.title)}</h1>\n${body}\n${pageFoot}</div></div></article>`,
     });
   }
 
@@ -253,6 +257,7 @@ export async function renderSite({ model, media, outDir, cacheDir, warn, buildId
   const st = model.styles;
   const hex = (v, d) => /^#?[0-9a-f]{3,8}$/i.test(str(v)) ? '#' + str(v).replace('#', '') : d;
   const clamp = (v, a, b, d) => Math.min(b, Math.max(a, num(v, d)));
+  const displayFont = prof.displayFont || st.font_display;
   const vars = [
     `--glass:${clamp(st.glass_opacity, 0.2, 0.98, 0.6)}`,
     `--pw-max:${clamp(st.page_width, 560, 1400, 860)}px`,
@@ -261,15 +266,18 @@ export async function renderSite({ model, media, outDir, cacheDir, warn, buildId
     `--text:${hex(st.text_color, '#ECE9F4')}`,
     `--muted:${hex(st.muted_color, '#A29FB7')}`,
     `--sat:${clamp(st.hue_saturation, 0, 100, 70)}%`,
-    `--f-display:"${str(st.font_display).replace(/"/g, '')}", "Iowan Old Style", Georgia, serif`,
+    `--f-display:"${str(displayFont).replace(/"/g, '')}", ${prof.kind === 'matrix' ? 'ui-monospace, "SF Mono", Menlo, monospace' : prof.kind === 'tron' ? 'ui-sans-serif, system-ui, sans-serif' : '"Iowan Old Style", Georgia, serif'}`,
     `--f-body:"${str(st.font_body).replace(/"/g, '')}", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif`,
     `--f-mono:"${str(st.font_utility).replace(/"/g, '')}", ui-monospace, "SF Mono", Menlo, monospace`,
+    ...Object.entries(prof.rootVars).map(([k, v]) => `${k}:${v}`),
   ].join(';');
-  const fonts = await fontHead({ families: [st.font_display, st.font_body, st.font_utility], outDir, cacheDir, root: ROOT, warn });
+  const fonts = await fontHead({ families: [displayFont, st.font_body, st.font_utility], outDir, cacheDir, root: ROOT, warn });
 
   const config = {
     home: model.site.home,
-    pages: model.pages.map(p => ({ id: p.id, hue: p.hue, title: p.title })),
+    pages: model.pages.map((p, i) => ({ id: p.id, hue: prof.pages[i].h, title: p.title, field: prof.pages[i].field })),
+    profile: prof.kind,
+    fx: prof.fx,
     siteName: model.site.name,
     turn: {
       speed: ['slow', 'quick'].includes(str(st.turn_speed).toLowerCase()) ? str(st.turn_speed).toLowerCase() : 'normal',
@@ -302,7 +310,7 @@ export async function renderSite({ model, media, outDir, cacheDir, warn, buildId
 
   const urlOf = id => (id === model.site.home ? '' : `${id}/`);
   const navHtml = model.pages.map((p, i) =>
-    `<a class="mark" href="${ROOT}${urlOf(p.id)}" data-id="${p.id}" style="--h:${p.hue}">${esc(p.label)}</a>`).join('');
+    `<a class="mark" href="${ROOT}${urlOf(p.id)}" data-id="${p.id}" style="${colorStyle(i)}">${esc(p.label)}</a>`).join('');
 
   async function writePage(front, file, root, { is404 = false } = {}) {
     const p = front.page;
@@ -333,14 +341,15 @@ export async function renderSite({ model, media, outDir, cacheDir, warn, buildId
       `<script type="application/json" id="uw-config">${JSON.stringify(config).replace(/</g, '\\u003c')}</script>`,
       `<script src="${ROOT}assets/${jsName}" defer></script>`,
     ].filter(Boolean).join('\n');
-    const bodyCls = str(st.tabs_desktop).toLowerCase() === 'left' ? ' class="tabs-left"' : '';
+    const classes = [str(st.tabs_desktop).toLowerCase() === 'left' ? 'tabs-left' : '', prof.bodyClass].filter(Boolean).join(' ');
+    const bodyCls = classes ? ` class="${classes}"` : '';
     const html = `<!doctype html>
 <html lang="${esc(model.site.language)}">
 <head>
 ${head}
 </head>
 <body${bodyCls} data-front="${p.id}" data-root="${ROOT}" data-build="${buildId}">
-<canvas id="field" aria-hidden="true"></canvas><div class="grain" aria-hidden="true"></div>
+<canvas id="field" aria-hidden="true"></canvas>${prof.fx ? '<canvas id="fx" aria-hidden="true"></canvas>' : ''}<div class="grain" aria-hidden="true"></div>
 <main class="stage" id="stage"><div class="stack" id="stack">
 ${stack}
 </div></main>

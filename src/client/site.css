@@ -5,6 +5,7 @@
   --glass:.6; --pw-max:860px; --radius:22px; --fs:16px;
   --f-display:Georgia, serif; --f-body:system-ui, sans-serif; --f-mono:ui-monospace, monospace;
   --faint:rgba(236,233,244,.09);
+  --glass-rgb:16,17,28; --ts:58%; --tl:38%;
   --pw:min(var(--pw-max), calc(100vw - 240px));
   color-scheme:dark;
 }
@@ -28,7 +29,7 @@ a:hover{color:#fff}
   background:
     linear-gradient(135deg, hsla(var(--h),var(--sat),70%,.10), transparent 38%),
     linear-gradient(to bottom, rgba(255,255,255,.035), transparent 30%),
-    rgba(16,17,28,var(--glass));
+    rgba(var(--glass-rgb),var(--glass));
   border:1px solid rgba(255,255,255,.13);
   box-shadow:0 0 0 1px hsla(var(--h),var(--sat),70%,.06) inset, 0 30px 80px -30px rgba(0,0,0,.7), 0 0 60px -20px hsla(var(--h),var(--sat),60%,.25);
   overflow:hidden;will-change:transform,opacity;backface-visibility:hidden;visibility:hidden;container-type:inline-size}
@@ -42,7 +43,7 @@ a:hover{color:#fff}
 
 /* type */
 h1,h2,h3{font-weight:400;text-wrap:balance;margin:0}
-h1{font-family:var(--f-display);font-size:clamp(36px,6vw,64px);line-height:1.04;letter-spacing:-.01em;margin-bottom:6px}
+h1{color:var(--title,var(--text));font-family:var(--f-display);font-size:clamp(36px,6vw,64px);line-height:1.04;letter-spacing:-.01em;margin-bottom:6px}
 h2{font-family:var(--f-display);font-size:clamp(24px,3.4vw,30px);line-height:1.15;margin-top:18px}
 h3{font-family:var(--f-body);font-weight:600;font-size:1.12em;line-height:1.3;margin-top:8px}
 p{margin:0;max-width:64ch;color:color-mix(in srgb, var(--text) 86%, var(--muted))}
@@ -143,17 +144,35 @@ figcaption{font-size:.85em;color:var(--muted);margin-top:8px}
 .marks{position:fixed;top:96px;left:calc(50% + var(--pw) / 2 - 2px);display:flex;flex-direction:column;gap:8px;z-index:5}
 .mark{display:block;text-decoration:none;font:600 15px/1.25 var(--f-body);letter-spacing:.01em;color:#fff;text-align:left;text-shadow:0 1px 3px rgba(0,0,0,.35);
   padding:15px 24px 15px 18px;min-width:160px;max-width:220px;border-radius:0 12px 12px 0;
-  background:linear-gradient(90deg, hsla(var(--h),58%,38%,.94), hsla(var(--h),52%,30%,.9));
-  border-left:4px solid hsl(var(--h),60%,20%);
+  background:linear-gradient(90deg, hsla(var(--h),var(--ts),var(--tl),.94), hsla(var(--h),calc(var(--ts) - 6%),calc(var(--tl) - 8%),.9));
+  border-left:4px solid hsl(var(--h),var(--ts),calc(var(--tl) - 18%));
   transform:translateX(-8px);opacity:.9;
   transition:transform .55s cubic-bezier(.2,1.4,.4,1), opacity .3s, background .3s, box-shadow .3s;box-shadow:6px 8px 24px -10px rgba(0,0,0,.6)}
-.mark:hover{transform:translateX(0);opacity:1;color:#fff;background:linear-gradient(90deg, hsla(var(--h),62%,43%,.96), hsla(var(--h),56%,34%,.92))}
-.mark[aria-current="page"]{transform:translateX(6px);opacity:1;background:linear-gradient(90deg, hsla(var(--h),68%,48%,.98), hsla(var(--h),62%,40%,.95));
+.mark:hover{transform:translateX(0);opacity:1;color:#fff;background:linear-gradient(90deg, hsla(var(--h),calc(var(--ts) + 4%),calc(var(--tl) + 5%),.96), hsla(var(--h),calc(var(--ts) - 2%),calc(var(--tl) - 4%),.92))}
+.mark[aria-current="page"]{transform:translateX(6px);opacity:1;background:linear-gradient(90deg, hsla(var(--h),calc(var(--ts) + 10%),calc(var(--tl) + 10%),.98), hsla(var(--h),calc(var(--ts) + 4%),calc(var(--tl) + 2%),.95));
   box-shadow:6px 8px 24px -10px rgba(0,0,0,.6), 0 0 28px -6px hsla(var(--h),85%,60%,.65)}
 .tabs-left .marks{left:auto;right:calc(50% + var(--pw) / 2 - 2px);align-items:flex-end}
-.tabs-left .mark{border-left:0;border-right:4px solid hsl(var(--h),60%,20%);border-radius:10px 0 0 10px;text-align:right;transform:translateX(10px)}
+.tabs-left .mark{border-left:0;border-right:4px solid hsl(var(--h),var(--ts),calc(var(--tl) - 18%));border-radius:10px 0 0 10px;text-align:right;transform:translateX(10px)}
 .tabs-left .mark:hover{transform:translateX(0)}
 .tabs-left .mark[aria-current="page"]{transform:translateX(-4px)}
+
+/* ---------- themed profiles ---------- */
+#fx{position:fixed;left:0;top:0;width:100%;height:100lvh;display:block;pointer-events:none}
+.profile-tron .page,.profile-matrix .page{border-color:color-mix(in srgb, var(--neon) 45%, transparent);
+  box-shadow:0 0 0 1px color-mix(in srgb, var(--neon) 18%, transparent) inset, 0 0 40px -12px color-mix(in srgb, var(--neon) 55%, transparent), 0 30px 80px -30px rgba(0,0,0,.8)}
+.profile-tron .page::before,.profile-matrix .page::before{background:linear-gradient(90deg,transparent,var(--neon),transparent)}
+.profile-tron h1,.profile-matrix h1{color:var(--neon);text-shadow:0 0 18px color-mix(in srgb, var(--neon) 55%, transparent)}
+.profile-tron h1{font-size:clamp(28px,4.6vw,48px);letter-spacing:.04em;text-transform:uppercase}
+.profile-matrix h2,.profile-matrix h3,.profile-matrix .mark,.profile-matrix .btn{font-family:var(--f-display)}
+.profile-tron .mark,.profile-matrix .mark{color:var(--neon);text-shadow:0 0 10px color-mix(in srgb, var(--neon) 60%, transparent);
+  background:rgba(var(--glass-rgb),.88);border-left-color:var(--neon);box-shadow:0 0 0 1px color-mix(in srgb, var(--neon) 30%, transparent) inset}
+.profile-tron .mark:hover,.profile-matrix .mark:hover{background:rgba(var(--glass-rgb),.96);box-shadow:0 0 18px -4px color-mix(in srgb, var(--neon) 60%, transparent), 0 0 0 1px color-mix(in srgb, var(--neon) 50%, transparent) inset}
+.profile-tron .mark[aria-current="page"],.profile-matrix .mark[aria-current="page"]{color:#020608;text-shadow:none;background:var(--neon);
+  box-shadow:0 0 26px -2px color-mix(in srgb, var(--neon) 75%, transparent)}
+.profile-tron .mark[aria-current="page"]{background:var(--neon2);box-shadow:0 0 26px -2px color-mix(in srgb, var(--neon2) 75%, transparent)}
+.profile-tron .btn{background:var(--neon2);color:#120700;box-shadow:0 0 22px -6px var(--neon2)}
+.profile-matrix .btn{background:var(--neon);color:#021006;box-shadow:0 0 22px -6px var(--neon)}
+.profile-tron a:not(.btn):not(.mark),.profile-matrix a:not(.btn):not(.mark){color:var(--neon)}
 
 /* Phones: the whole document scrolls (not an inner box), so the browser shows the page
    and its background under its translucent status bar and toolbar, edge to edge. */
@@ -175,10 +194,11 @@ figcaption{font-size:.85em;color:var(--muted);margin-top:8px}
   .img-full figcaption{padding-inline:20px}
   .marks,.tabs-left .marks{top:0;left:0;right:0;bottom:auto;flex-direction:row;flex-wrap:wrap;gap:6px 5px;align-items:flex-end;
     padding:calc(8px + env(safe-area-inset-top,0px)) max(10px, env(safe-area-inset-right,0px)) 0 max(10px, env(safe-area-inset-left,0px))}
-  .mark,.tabs-left .mark{min-width:0;max-width:none;flex:1 1 auto;text-align:center;font-size:14px;border:0;border-bottom:3px solid hsl(var(--h),60%,20%);border-radius:10px 10px 0 0;
+  .mark,.tabs-left .mark{min-width:0;max-width:none;flex:1 1 auto;text-align:center;font-size:14px;border:0;border-bottom:3px solid hsl(var(--h),var(--ts),calc(var(--tl) - 18%));border-radius:10px 10px 0 0;
     transform:translateY(-3px);padding:11px 14px 10px;opacity:.9}
   .mark:hover,.tabs-left .mark:hover{transform:translateY(-3px)}
   .mark[aria-current="page"],.tabs-left .mark[aria-current="page"]{transform:translateY(0);opacity:1}
+  .profile-tron .mark,.profile-matrix .mark{border-bottom-color:var(--neon)}
   .gallery-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .lead{font-size:1.1em}
 }

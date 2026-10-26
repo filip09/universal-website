@@ -44,4 +44,5 @@ test('every profile builds four background blobs per page', () => {
 
 test('hex to hsl', () => {
   assert.deepEqual(hexToHsl('#00FF41'), [135, 100, 50]);
+  assert.equal(resolveProfile('seda', pages).pages[0].s, 0);
 });

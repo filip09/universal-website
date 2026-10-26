@@ -149,7 +149,7 @@ sheet("site", [("setting", 22), ("value", 46), ("co to dělá", 58)], [
 
 # ---------- styles ----------
 PROFILES = ["manual", "terakota", "jantar", "koral", "broskev", "karamel", "ruze", "vinova", "pisek",
-            "tron", "matrix", "soumrak", "zeme", "pastel", "sever"]
+            "seda", "tron", "soumrak", "zeme", "pastel", "sever"]
 styles_ws = sheet("styles", [("setting", 24), ("value", 16), ("možnosti", 26), ("co to dělá", 58)], [
     ("color_profile", "manual", "roletka (viz Návod)", "Barevný profil webu. manual = barvy podle sloupce hue v pages a nastavení níže. Ostatní profily nastaví barvy samy."),
     ("background", "drift", "drift / still / solid", "drift: barvy se pomalu pohybují. still: stejné barvy bez pohybu. solid: jedna barva."),
@@ -300,16 +300,16 @@ section("Barevné profily (styles › color_profile)")
 para("V listu styles vyberte v řádku color_profile jeden profil. Pozadí zůstává živé a jemně proměnlivé, profil mu dává základní tón. Kromě manual profily nepoužívají sloupec hue ani barvy textu z listu styles.", 42)
 table(["profil", "", "jak působí", "barvy"], [
     ("manual", "", "Barvu každé stránky určuje sloupec hue v listu pages.", "podle vás"),
-    ("terakota", "", "Jedna barva v odstínech. Teplá cihlová.", "#C8643B"),
-    ("jantar", "", "Jedna barva v odstínech. Medová, zlatavá.", "#D9932E"),
-    ("koral", "", "Jedna barva v odstínech. Svěží korálová.", "#E8715A"),
-    ("broskev", "", "Jedna barva v odstínech. Jemná broskvová.", "#E89B7A"),
-    ("karamel", "", "Jedna barva v odstínech. Karamelově hnědá.", "#B9773F"),
-    ("ruze", "", "Jedna barva v odstínech. Prášková růže.", "#C97B84"),
-    ("vinova", "", "Jedna barva v odstínech. Hluboká vínová.", "#9E3B5A"),
-    ("pisek", "", "Jedna barva v odstínech. Světlý písek.", "#C9A77A"),
-    ("tron", "", "Neonově azurová s oranžovou, ubíhající mřížka v pozadí.", "#00E5FF · #FF7A1A"),
-    ("matrix", "", "Fosforově zelená, jemně padající znaky v pozadí.", "#00FF41"),
+    ("terakota", "", "Jedna barva v odstínech, pozadí v doplňkové barvě. Teplá cihlová.", "#C8643B"),
+    ("jantar", "", "Jedna barva v odstínech, pozadí v doplňkové barvě. Medová, zlatavá.", "#D9932E"),
+    ("koral", "", "Jedna barva v odstínech, pozadí v doplňkové barvě. Svěží korálová.", "#E8715A"),
+    ("broskev", "", "Jedna barva v odstínech, pozadí v doplňkové barvě. Jemná broskvová.", "#E89B7A"),
+    ("karamel", "", "Jedna barva v odstínech, pozadí v doplňkové barvě. Karamelově hnědá.", "#B9773F"),
+    ("ruze", "", "Jedna barva v odstínech, pozadí v doplňkové barvě. Prášková růže.", "#C97B84"),
+    ("vinova", "", "Jedna barva v odstínech, pozadí v doplňkové barvě. Hluboká vínová.", "#9E3B5A"),
+    ("pisek", "", "Jedna barva v odstínech, pozadí v doplňkové barvě. Světlý písek.", "#C9A77A"),
+    ("seda", "", "Stupně šedi, bez barvy. Pozadí v tmavě šedých tónech.", "#9C9C9E"),
+    ("tron", "", "Neonově azurová s oranžovou, záře na hranách, pozadí v modrých a oranžových tónech.", "#00E5FF · #FF7A1A"),
     ("soumrak", "", "Čtyři barvy se střídají po stránkách. Tlumená korálová, indigo, tyrkys, zlatá.", "#D98B6A #7C78C8 #5BA8A0 #D9B86C"),
     ("zeme", "", "Čtyři barvy. Mech, okr, cihla, jezerní modrá.", "#8FBF6F #E9A23B #C9583E #4F86C6"),
     ("pastel", "", "Čtyři barvy. Tlumená růžová, aqua, levandulová, světlá citronová.", "#D9A3B8 #9CCBCF #A3B4D9 #DCD9A8"),

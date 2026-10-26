@@ -11,9 +11,9 @@ export const PROFILES = {
   ruze:     { kind: 'mono', base: '#1D0E12', mid: '#63323C', accent: '#C97B84', light: '#F0CDD1' },
   vinova:   { kind: 'mono', base: '#19080E', mid: '#521A2C', accent: '#9E3B5A', light: '#E3A9BC' },
   pisek:    { kind: 'mono', base: '#1A150D', mid: '#5C4C33', accent: '#C9A77A', light: '#F1E3CB' },
-  // themed, with their own animated layer
+  seda:     { kind: 'mono', gray: true, base: '#0E0E0F', mid: '#3A3A3C', accent: '#9C9C9E', light: '#E8E8E8' },
+  // themed: neon edges and glow, background in the same family
   tron:     { kind: 'tron', base: '#03060B', mid: '#0A2A3A', accent: '#00E5FF', light: '#B8F6FF', second: '#FF7A1A' },
-  matrix:   { kind: 'matrix', base: '#010A03', mid: '#003B12', accent: '#00FF41', light: '#C8FFD4', second: '#008F11' },
   // four colours that take turns page by page
   soumrak:  { kind: 'palette', base: '#11121C', colors: ['#D98B6A', '#7C78C8', '#5BA8A0', '#D9B86C'] },
   zeme:     { kind: 'palette', base: '#12100D', colors: ['#8FBF6F', '#E9A23B', '#C9583E', '#4F86C6'] },
@@ -42,8 +42,12 @@ const hsl = ([h, s, l]) => `hsl(${h},${s}%,${l}%)`;
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const wrap = h => ((Math.round(h) % 360) + 360) % 360;
 
-// Tab lightness steps for one-colour profiles, so neighbouring tabs differ.
-const MONO_STEPS = [30, 40, 34, 44, 27, 37, 47, 32];
+// One-colour profiles: tabs go from darkest to lightest, then start again.
+const TAB_DARK = 22, TAB_LIGHT = 46, TAB_CYCLE = 6;
+function tabShade(i, count) {
+  const cycle = Math.max(2, Math.min(count, TAB_CYCLE));
+  return Math.round(TAB_DARK + (i % cycle) * (TAB_LIGHT - TAB_DARK) / (cycle - 1));
+}
 
 /**
  * pages: [{hue}] in display order; sat: manual saturation (0–100).
@@ -60,7 +64,7 @@ export function resolveProfile(name, pages, { sat = 70, warn = () => {} } = {}) 
   if (!p) {
     // manual: the hue column decides, background built around it
     return {
-      key, kind: 'manual', fx: null, rootVars: {}, bodyClass: '',
+      key, kind: 'manual', rootVars: {}, bodyClass: '',
       pages: pages.map(pg => ({
         h: pg.hue, s: sat, ts: 58, tl: 38,
         field: {
@@ -74,27 +78,31 @@ export function resolveProfile(name, pages, { sat = 70, warn = () => {} } = {}) 
 
   const base = hexToHsl(p.base);
   if (p.kind === 'mono') {
-    const A = hexToHsl(p.accent), M = hexToHsl(p.mid), L = hexToHsl(p.light);
+    const A = hexToHsl(p.accent), L = hexToHsl(p.light);
+    const gray = !!p.gray;
+    const comp = wrap(A[0] + 180);                    // the background lives in the complementary colour
+    const sat = v => (gray ? 0 : v);
     return {
-      key, kind: 'mono', fx: null, bodyClass: 'profile-mono',
+      key, kind: 'mono', bodyClass: 'profile-mono',
       rootVars: {
-        '--text': hsl([A[0], 30, 93]), '--muted': hsl([A[0], 22, 70]),
-        '--glass-rgb': hslToRgbStr([base[0], base[1], clamp(base[2] + 1, 4, 12)]),
+        '--text': hsl([A[0], sat(30), 93]), '--muted': hsl([A[0], sat(22), 70]),
+        '--glass-rgb': hslToRgbStr([base[0], sat(base[1]), clamp(base[2] + 1, 4, 12)]),
         '--ink': p.base, '--title': p.light,
       },
       pages: pages.map((pg, i) => {
-        const shift = ((i % 3) - 1) * 5;          // each page leans slightly warmer or cooler
+        const shift = ((i % 3) - 1) * 8;              // each page leans a little to one side of the complement
         return {
-          h: A[0], s: clamp(A[1], 30, 75), ts: clamp(A[1] - 10, 25, 65), tl: MONO_STEPS[i % MONO_STEPS.length],
+          h: A[0], s: sat(clamp(A[1], 30, 75)), ts: sat(clamp(A[1] - 10, 25, 65)), tl: tabShade(i, pages.length),
+          gs: gray ? 0 : 85,
           field: {
-            base: [base[0], clamp(base[1], 20, 60), 6],
+            base: [comp, sat(30), 6],
             blobs: [
-              [wrap(A[0] + shift), clamp(A[1], 30, 80), 40],
-              [wrap(M[0] + 8 + shift), clamp(M[1], 30, 75), 30],
-              [wrap(A[0] - 10 + shift), clamp(A[1] - 10, 25, 70), 34],
-              [wrap(L[0] + shift), clamp(L[1] - 20, 20, 60), 36],
+              [wrap(comp + shift), sat(45), gray ? 30 : 34],
+              [wrap(comp + 22 + shift), sat(38), gray ? 22 : 28],
+              [wrap(comp - 20 + shift), sat(42), gray ? 26 : 30],
+              [A[0], sat(clamp(A[1] - 20, 25, 60)), gray ? 18 : 26],   // a faint touch of the main colour
             ],
-            drift: 7,
+            drift: gray ? 0 : 9,
           },
         };
       }),
@@ -105,7 +113,7 @@ export function resolveProfile(name, pages, { sat = 70, warn = () => {} } = {}) 
     const C = p.colors.map(hexToHsl);
     const text = hsl([base[0], 18, 93]);
     return {
-      key, kind: 'palette', fx: null, bodyClass: 'profile-palette',
+      key, kind: 'palette', bodyClass: 'profile-palette',
       rootVars: {
         '--text': text, '--muted': hsl([base[0], 12, 70]),
         '--glass-rgb': hslToRgbStr([base[0], clamp(base[1], 0, 30), clamp(base[2] + 2, 6, 14)]),
@@ -126,29 +134,27 @@ export function resolveProfile(name, pages, { sat = 70, warn = () => {} } = {}) 
     };
   }
 
-  // tron / matrix
-  const A = hexToHsl(p.accent), S = hexToHsl(p.second), M = hexToHsl(p.mid);
-  const tron = p.kind === 'tron';
+  // tron
+  const A = hexToHsl(p.accent), S = hexToHsl(p.second);
   return {
-    key, kind: p.kind, bodyClass: `profile-${p.kind}`,
-    fx: { kind: p.kind, accent: p.accent, second: p.second, mid: p.mid },
-    displayFont: tron ? 'Orbitron' : 'Share Tech Mono',
+    key, kind: 'tron', bodyClass: 'profile-tron',
+    displayFont: 'Orbitron',
     rootVars: {
-      '--text': hsl([A[0], tron ? 55 : 45, 90]), '--muted': hsl([A[0], tron ? 30 : 30, 66]),
-      '--glass-rgb': tron ? '4,10,16' : '2,10,4', '--ink': p.base,
+      '--text': hsl([A[0], 55, 90]), '--muted': hsl([A[0], 30, 66]),
+      '--glass-rgb': '4,10,16', '--ink': p.base,
       '--neon': p.accent, '--neon2': p.second,
     },
     pages: pages.map((pg, i) => ({
-      h: A[0], s: 100, ts: tron ? 70 : 80, tl: 9,
+      h: A[0], s: 100, ts: 70, tl: 9, gs: 85,
       field: {
-        base: [base[0], clamp(base[1], 30, 70), 3],
+        base: [205, 60, 5],
         blobs: [
-          [A[0], 90, tron ? 20 : 16],
-          [M[0], clamp(M[1], 50, 100), 14],
-          [tron && i % 2 ? S[0] : A[0], tron && i % 2 ? 80 : 70, tron && i % 2 ? 14 : 10],
-          [wrap(A[0] + (tron ? 20 : -15)), 70, 9],
+          [A[0], 100, i % 2 ? 26 : 32],               // cyan glow
+          [210, 80, 22],                               // deep blue
+          [S[0], 100, i % 2 ? 30 : 22],                // orange, stronger on every other page
+          [175, 80, 20],                               // teal
         ],
-        drift: 3,
+        drift: 10,
       },
     })),
   };

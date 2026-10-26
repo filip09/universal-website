@@ -235,7 +235,7 @@ export async function renderSite({ model, media, outDir, cacheDir, warn, buildId
   const pageFoot = `<footer class="page-foot">${footLine}</footer>`;
   // colour profile: decides page colours, tab shades, text colours and the background
   const prof = resolveProfile(model.styles.color_profile, model.pages, { sat: num(model.styles.hue_saturation, 70), warn });
-  const colorStyle = i => { const c = prof.pages[i]; return `--h:${c.h};--sat:${c.s}%;--ts:${c.ts}%;--tl:${c.tl}%`; };
+  const colorStyle = i => { const c = prof.pages[i]; return `--h:${c.h};--sat:${c.s}%;--ts:${c.ts}%;--tl:${c.tl}%;--gs:${c.gs ?? 85}%`; };
   const articles = [];
   for (const [i, p] of model.pages.entries()) {
     const body = await renderContent(p.content, `pages › ${p.id}`);
@@ -266,7 +266,7 @@ export async function renderSite({ model, media, outDir, cacheDir, warn, buildId
     `--text:${hex(st.text_color, '#ECE9F4')}`,
     `--muted:${hex(st.muted_color, '#A29FB7')}`,
     `--sat:${clamp(st.hue_saturation, 0, 100, 70)}%`,
-    `--f-display:"${str(displayFont).replace(/"/g, '')}", ${prof.kind === 'matrix' ? 'ui-monospace, "SF Mono", Menlo, monospace' : prof.kind === 'tron' ? 'ui-sans-serif, system-ui, sans-serif' : '"Iowan Old Style", Georgia, serif'}`,
+    `--f-display:"${str(displayFont).replace(/"/g, '')}", ${prof.kind === 'tron' ? 'ui-sans-serif, system-ui, sans-serif' : '"Iowan Old Style", Georgia, serif'}`,
     `--f-body:"${str(st.font_body).replace(/"/g, '')}", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif`,
     `--f-mono:"${str(st.font_utility).replace(/"/g, '')}", ui-monospace, "SF Mono", Menlo, monospace`,
     ...Object.entries(prof.rootVars).map(([k, v]) => `${k}:${v}`),
@@ -277,7 +277,6 @@ export async function renderSite({ model, media, outDir, cacheDir, warn, buildId
     home: model.site.home,
     pages: model.pages.map((p, i) => ({ id: p.id, hue: prof.pages[i].h, title: p.title, field: prof.pages[i].field })),
     profile: prof.kind,
-    fx: prof.fx,
     siteName: model.site.name,
     turn: {
       speed: ['slow', 'quick'].includes(str(st.turn_speed).toLowerCase()) ? str(st.turn_speed).toLowerCase() : 'normal',
@@ -349,7 +348,7 @@ export async function renderSite({ model, media, outDir, cacheDir, warn, buildId
 ${head}
 </head>
 <body${bodyCls} data-front="${p.id}" data-root="${ROOT}" data-build="${buildId}">
-<canvas id="field" aria-hidden="true"></canvas>${prof.fx ? '<canvas id="fx" aria-hidden="true"></canvas>' : ''}<div class="grain" aria-hidden="true"></div>
+<canvas id="field" aria-hidden="true"></canvas><div class="grain" aria-hidden="true"></div>
 <main class="stage" id="stage"><div class="stack" id="stack">
 ${stack}
 </div></main>

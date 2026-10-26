@@ -5,12 +5,12 @@ import { renderSite } from './render.js';
 
 export const now = () => new Date().toLocaleString('cs-CZ', { timeZone: 'Europe/Prague' });
 
-export async function buildFromSource({ source, outDir, cacheDir, warnings }) {
+export async function buildFromSource({ source, outDir, cacheDir, warnings, form }) {
   const warn = msg => { if (!warnings.includes(msg)) warnings.push(msg); };
   const model = buildModel(source.tabs, warn);
   if (!model.pages.length) throw new Error('Web nemá žádnou viditelnou stránku (list pages).');
   const buildId = Date.now().toString(36);
-  const result = await renderSite({ model, media: source.media, outDir, cacheDir, warn, buildId });
+  const result = await renderSite({ model, media: source.media, outDir, cacheDir, warn, buildId, form });
   return { model, ...result };
 }
 

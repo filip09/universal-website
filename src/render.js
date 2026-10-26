@@ -23,7 +23,7 @@ function youtubeId(u) {
 }
 function vimeoId(u) { const m = u.match(/vimeo\.com\/(?:video\/)?(\d+)/); return m ? m[1] : ''; }
 
-export async function renderSite({ model, media, outDir, cacheDir, warn, buildId }) {
+export async function renderSite({ model, media, outDir, cacheDir, warn, buildId, form = {} }) {
   await rm(outDir, { recursive: true, force: true });
   await mkdir(outDir, { recursive: true });
   const pipe = new ImagePipeline({ cacheDir, outDir, warn });
@@ -169,6 +169,7 @@ export async function renderSite({ model, media, outDir, cacheDir, warn, buildId
           }
           break;
         }
+        case 'form': html.push(renderForm(value, where)); break;
         case 'embed': {
           const e = model.embeds.get(value);
           if (!e) { warn(`${where}: vložený prvek „${value}“ není v listu embeds.`); break; }
@@ -179,6 +180,48 @@ export async function renderSite({ model, media, outDir, cacheDir, warn, buildId
       }
     }
     return html.join('\n');
+  }
+
+  // ---------- forms ----------
+  // A plain HTML form. The browser script (engine.js) sends it to the platform's
+  // Apps Script, which looks up the recipient (site › form_email) by client id.
+  // The recipient address is never part of the page.
+  const FORM_TEXT = {
+    cs: { name: 'Jméno', email: 'E-mail', phone: 'Telefon', optional: 'nepovinné', message: 'Zpráva', send: 'Odeslat',
+      sending: 'Odesílám…', ok: 'Děkujeme, zpráva je na cestě. Ozveme se co nejdřív.',
+      err: 'Zprávu se nepodařilo odeslat. Zkuste to prosím za chvíli znovu.',
+      note: 'Zprávu dostane jen {web} a údaje použije jen k odpovědi.' },
+    en: { name: 'Name', email: 'E-mail', phone: 'Phone', optional: 'optional', message: 'Message', send: 'Send',
+      sending: 'Sending…', ok: 'Thank you, your message is on its way. We will get back to you soon.',
+      err: 'The message could not be sent. Please try again in a moment.',
+      note: 'Only {web} receives your message and uses your details just to reply.' },
+  };
+  const FORM_TYPES = { kontakt: 'kontakt', contact: 'kontakt' };
+  let formCount = 0;
+  function renderForm(value, where) {
+    const raw = str(value).toLowerCase() || 'kontakt';
+    let type = FORM_TYPES[raw];
+    if (!type) {
+      warnOnce('ft:' + raw, `${where}: formulář „${value}“ zatím neexistuje, zobrazí se kontaktní formulář.`);
+      type = 'kontakt';
+    }
+    if (!model.site.formEmail) warnOnce('fe', `${where}: v listu site chybí form_email, zprávy z formuláře nebude kam poslat.`);
+    if (!form.endpoint && form.strict) warnOnce('fu', `${where}: platforma nemá adresu pro příjem formulářů (FORM_ENDPOINT). Formulář se zobrazí, ale zprávy neodejdou.`);
+    const t = FORM_TEXT[model.site.language] || FORM_TEXT.cs;
+    const n = ++formCount, id = k => `f${n}-${k}`;
+    const field = (k, label, input) => `<label class="f-field" for="${id(k)}"><span>${label}</span>${input}</label>`;
+    return `<form class="uw-form" method="post" novalidate data-endpoint="${esc(form.endpoint || '')}" data-sending="${esc(t.sending)}" data-ok="${esc(t.ok)}" data-err="${esc(t.err)}">
+<input type="hidden" name="client" value="${esc(form.client || '')}"><input type="hidden" name="type" value="${type}"><input type="hidden" name="t" value="">
+<div class="f-trap" aria-hidden="true"><label>Web <input type="text" name="web" tabindex="-1" autocomplete="off"></label></div>
+<div class="f-grid">
+${field('name', t.name, `<input id="${id('name')}" name="name" type="text" required maxlength="120" autocomplete="name">`)}
+${field('email', t.email, `<input id="${id('email')}" name="email" type="email" required maxlength="200" autocomplete="email" inputmode="email">`)}
+${field('phone', `${t.phone} <em>(${t.optional})</em>`, `<input id="${id('phone')}" name="phone" type="tel" maxlength="40" autocomplete="tel">`)}
+</div>
+${field('message', t.message, `<textarea id="${id('message')}" name="message" required maxlength="5000" rows="5"></textarea>`)}
+<div class="f-foot"><button class="btn" type="submit">${t.send}</button><p class="f-note">${inline(t.note)}</p></div>
+<p class="f-status" role="status" aria-live="polite"></p>
+</form>`;
   }
 
   // YouTube preview image, downloaded at build time so the page never contacts Google before a click.

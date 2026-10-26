@@ -50,3 +50,8 @@ test('variables: year, site name, (c)', async () => {
   assert.equal(inline('(c) {rok} {web}'), '© <span class="uw-year">2031</span> Studio &lt;X&gt;');
   assert.match(inline('{ year }'), /2031/);
 });
+
+test('form keyword in Czech and English', () => {
+  assert.deepEqual(parseCell('formulář: kontakt')[0], { kw: 'form', value: 'kontakt', style: '' });
+  assert.equal(parseCell('form: contact')[0].kw, 'form');
+});

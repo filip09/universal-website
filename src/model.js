@@ -118,6 +118,9 @@ export function buildModel(tabs, warn) {
       shareImage: str(site.share_image),
       favicon: str(site.favicon),
       footer: str(site.footer),
+      // Where contact-form messages go. Only the Apps Script reads it when a message
+      // arrives; the address never appears in the published pages.
+      formEmail: str(site.form_email),
     },
     styles,
     pages,

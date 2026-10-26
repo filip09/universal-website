@@ -12,6 +12,7 @@ export const KEYWORDS = {
   video: 'video',
   list: 'list', seznam: 'list',
   embed: 'embed', 'vložit': 'embed', vlozit: 'embed',
+  form: 'form', 'formulář': 'form', formular: 'form',
   // text formatting
   lead: 'lead', 'úvod': 'lead', uvod: 'lead',
   heading: 'heading', nadpis: 'heading',

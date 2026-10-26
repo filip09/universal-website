@@ -73,6 +73,20 @@ Pak token pro tabulku, aby mohla spouštět publikování: vpravo nahoře profil
    Pokud doménu spravuje přímo Cloudflare, nastaví se to samo.
 3. Po nastavení DNS (minuty až hodiny) se při dalším publikování objeví ve sloupci url už vaše doména.
 
+## 9. Kontaktní formulář
+
+Zprávy z formulářů na všech webech přijímá skript řídicí tabulky a posílá je e-mailem. Adresa příjemce se na webu nikdy neobjeví.
+
+1. Pokud jste skript měnili: v řídicí tabulce **Rozšíření → Apps Script**, vložte novou verzi `apps-script/Ridici-tabulka.gs` a uložte. Pak **Nasadit → Spravovat nasazení**, u nasazení klikněte na tužku, **Verze: Nová verze → Nasadit**. Adresa webové aplikace zůstane stejná.
+2. V tabulce klienta v listu **site** vyplňte `form_email`, kam mají zprávy chodit.
+3. Do stránky v listu **pages** napište řádek `formulář: kontakt`.
+4. V řídicí tabulce klikněte na řádek klienta a zvolte **Weby → Vyzkoušet formulář označeného řádku**. Napoprvé se Google zeptá na oprávnění posílat e-maily (stejně jako v kroku 6). Zkušební zpráva přijde na `form_email`.
+5. Publikujte web. Formulář od té chvíle odesílá.
+
+Každá zpráva má nastavenou odpověď na odesílatele, takže klient odpovídá rovnou z e-mailu. V listu **formulare** řídicí tabulky je záznam, kdy a z jakého webu zpráva přišla (bez osobních údajů).
+
+Limity: jeden web může odeslat 30 zpráv za hodinu. Google navíc povoluje z běžného účtu Gmail zhruba 100 e-mailů denně pro všechny weby dohromady, z účtu Google Workspace 1 500.
+
 ---
 
 ### Když něco nejde
@@ -80,3 +94,4 @@ Pak token pro tabulku, aby mohla spouštět publikování: vpravo nahoře profil
 - **Ve sloupci status je „chyba: …“**: zpráva říká, co chybí. Nejčastěji nenasdílená složka nebo překlep v odkazu.
 - **V listu stav u klienta jsou upozornění**: web je online, ale něco chybí, třeba obrázek s jiným názvem.
 - **Podrobný záznam**: na GitHubu v repozitáři záložka **Actions**, poslední běh.
+- **Formulář hlásí, že se zprávu nepodařilo odeslat**: v listu formulare řídicí tabulky je u posledního řádku důvod. Nejčastěji chybí `form_email`, nebo skript nebyl nasazený jako nová verze.

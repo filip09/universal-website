@@ -27,6 +27,8 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       TARGET: ${{ github.event.client_payload.client || inputs.client }}
       SHEET: ${{ github.event.client_payload.sheet }}
+      # contact forms post to the control sheet's Apps Script (sent along with each publish)
+      FORM_ENDPOINT: ${{ github.event.client_payload.form || vars.FORM_ENDPOINT }}
     steps:
       - uses: actions/checkout@v4
 

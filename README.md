@@ -22,6 +22,7 @@ Weby, kterými se listuje jako knihou. Obsah píšete v Google Sheets, obrázky 
 - **Řídicí tabulka**: jeden řádek = jeden web. Sem zapisuje i stav posledního publikování.
 - **Tabulka klienta**: listy `pages`, `texts`, `media`, `items`, `embeds`, `site`, `styles`. Návod je přímo v ní, v listu „Návod“.
 - **Sestavení** probíhá jen při kliknutí na Publikovat. Návštěvník pak dostává hotové soubory, nic se nenačítá z Google.
+- **Formuláře**: řádek `formulář: kontakt` vloží kontaktní formulář. Zprávy přijímá skript řídicí tabulky a posílá je na adresu `form_email` z listu `site` tabulky klienta.
 - **Obrázky** se zmenší do několika velikostí a převedou do AVIF a WebP. Zpracovaný obrázek si sestavení pamatuje a podruhé ho nedělá.
 
 ## Co je v repozitáři

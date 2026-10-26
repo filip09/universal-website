@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Command line:
 //   node src/cli.js build --local sheet.xlsx --media folder --out dist/name
-//       builds from local files (no accounts needed)
+//       builds from local files (no accounts needed); --form-endpoint URL --client ID
+//       makes its contact forms send to a (test) endpoint
 //   node src/cli.js publish --client <id>     publishes one client from the control sheet
 //   node src/cli.js publish --all             publishes every active client
 //   node src/cli.js publish --sheet <id>      publishes the client whose folder holds this spreadsheet
@@ -21,7 +22,9 @@ async function buildLocal() {
   const outDir = opt('out') || path.join('dist', name);
   const warnings = [];
   const source = await localSource({ xlsxPath, mediaDir: opt('media') || null, warn: m => warnings.push(m) });
-  const res = await buildFromSource({ source, outDir, cacheDir: defaultCache(name), warnings });
+  const endpoint = opt('form-endpoint');
+  const form = { endpoint: typeof endpoint === 'string' ? endpoint : '', client: typeof opt('client') === 'string' ? opt('client') : name };
+  const res = await buildFromSource({ source, outDir, cacheDir: defaultCache(name), warnings, form });
   const status = { ok: true, when: now(), message: summary(res), warnings, outDir };
   await source.report(status);
   console.log(`✓ ${outDir}: ${status.message}`);
@@ -54,7 +57,9 @@ async function publish(deployIt) {
       console.log(`\n▸ ${c.client}`);
       await writeClientStatus(auth, controlId, c, { status: 'publikuji…' });
       source = await googleSource({ auth, folderLink: c.folder, warn });
-      const res = await buildFromSource({ source, outDir, cacheDir: defaultCache(c.client), warnings });
+      // contact forms post to the control sheet's Apps Script web app (see apps-script/)
+      const form = { endpoint: process.env.FORM_ENDPOINT || '', client: c.client, strict: true };
+      const res = await buildFromSource({ source, outDir, cacheDir: defaultCache(c.client), warnings, form });
       let url = '', domainNote = '';
       if (deployIt) {
         const d = await deploy({ client: c.client, outDir });

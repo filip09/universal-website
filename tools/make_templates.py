@@ -145,6 +145,7 @@ sheet("site", [("setting", 22), ("value", 46), ("co to dělá", 58)], [
     ("share_image", "img-hero", "Výchozí obrázek při sdílení odkazu (id z media)."),
     ("favicon", "img-favicon", "Malá ikona v záložce prohlížeče (id z media)."),
     ("footer", "drobné: © {rok} {web}", "Patička na každé stránce. Stejný zápis jako content. {rok} je vždy aktuální rok, {web} je site_name. Prázdné = © rok a název webu."),
+    ("form_email", "", "Kam chodí zprávy z formuláře (formulář: kontakt). Na webu se nezobrazí. Více adres oddělte čárkou."),
 ], note_cols=(2,), tab="6B5BFF")
 
 # ---------- styles ----------
@@ -231,7 +232,7 @@ table(["list", "jeden řádek je", "hlavní sloupce", "k čemu"], [
     ("texts", "jeden znovupoužitelný text", "id, content", "Delší texty, které chcete mít zvlášť nebo na více stránkách."),
     ("media", "jeden obrázek nebo video", "id, source, alt", "Volitelné: obrázky, kterým chcete dát popis nebo popisek. Jinak stačí napsat název souboru přímo v pages."),
     ("items", "jedna karta, krok nebo fotka galerie", "group, order", "Seznamy karet a galerie: řádky se stejnou group patří k sobě."),
-    ("embeds", "kus HTML", "id, html", "Widgety, formuláře, cokoli vlastního."),
+    ("embeds", "kus HTML", "id, html", "Widgety a cokoli vlastního."),
     ("site", "jedno nastavení", "setting, value", "Název, doména, úvodní stránka, patička."),
     ("styles", "jedno nastavení vzhledu", "setting, value", "Písma, barvy, sklo, rychlost a úhel otočení."),
 ])
@@ -245,6 +246,7 @@ table(["klíčové slovo", "anglicky", "co za ním může být", "příklad"], [
     ("video:", "video:", "odkaz na YouTube / Vimeo, nebo id z media", "video: https://youtu.be/abc123 | wide"),
     ("seznam:", "list:", "group z items (karty), nebo položky oddělené ;", "seznam: turn-beats | steps"),
     ("vložit:", "embed:", "id z embeds", "vložit: html-clock"),
+    ("formulář:", "form:", "kontakt (zprávy chodí na form_email z listu site)", "formulář: kontakt"),
 ], code_first=True)
 r += 1
 para("Jedno slovo bez mezer, které odpovídá existujícímu id, se vždy vezme jako odkaz na ten obsah. Cokoli jiného se zobrazí jako text.")

@@ -5,6 +5,9 @@
  *   2. Nasadit → Nové nasazení → Webová aplikace
  *        Spustit jako: Já · Kdo má přístup: Kdokoli
  *      and paste the web app address in Weby → Nastavení as the last item.
+ * The same web app also receives the contact forms of all published sites
+ * (doPost). After changing this script: Nasadit → Spravovat nasazení → upravit
+ * (tužka) → Verze: Nová verze → Nasadit. The address stays the same.
  */
 
 const TAB = 'klienti';
@@ -25,6 +28,7 @@ function onOpen() {
     .addSeparator()
     .addItem('Založit nového klienta…', 'newClient')
     .addItem('Připravit označený řádek (sdílení a odkaz)', 'prepareSelected')
+    .addItem('Vyzkoušet formulář označeného řádku', 'testFormSelected')
     .addSeparator()
     .addItem('Nastavení…', 'settings')
     .addToUi();
@@ -123,10 +127,125 @@ function doGet(e) {
   return HtmlService.createHtmlOutput(page_(title, text, ok)).setTitle(title);
 }
 
+// ---------- web app: contact forms on the published sites ----------
+// The page sends: client, type, name, email, phone, message, page, t (when the page
+// loaded) and web (a hidden field only bots fill in). The recipient is never taken
+// from the request: it is read from the client's own sheet (site › form_email).
+
+const FORM_LIMIT_PER_HOUR = 30; // per site; protects the daily e-mail quota
+const FORM_LOG_TAB = 'formulare';
+
+function doPost(e) {
+  const p = (e && e.parameter) || {};
+  const client = String(p.client || '').trim().toLowerCase();
+  const type = String(p.type || 'kontakt').trim().toLowerCase();
+  try {
+    // bots: the hidden field is filled in, or the form was sent faster than a person types.
+    // They get a normal "sent" answer so they do not learn anything.
+    if (String(p.web || '').trim()) { formLog_(client, type, 'zahozeno: robot'); return json_({ ok: true }); }
+    const t = Number(p.t || 0);
+    if (t && Date.now() - t < 3000) { formLog_(client, type, 'zahozeno: příliš rychle'); return json_({ ok: true }); }
+
+    if (type !== 'kontakt') throw new Error('Tento formulář zatím neexistuje.');
+    const name = oneLine_(p.name, 120), email = oneLine_(p.email, 200), phone = oneLine_(p.phone, 40);
+    const message = String(p.message || '').replace(/\r\n?/g, '\n').trim().slice(0, 5000);
+    if (!name || !message) throw new Error('Vyplňte prosím jméno a zprávu.');
+    if (!isEmail_(email)) throw new Error('Zkontrolujte prosím e-mail.');
+
+    const c = rows_().find(r => r.client === client);
+    if (!c || /^(no|ne)$/i.test(c.active || '')) throw new Error('Tento formulář není aktivní.');
+    if (!formRate_(client)) throw new Error('Formulář je teď přetížený. Zkuste to prosím za hodinu.');
+    if (MailApp.getRemainingDailyQuota() < 1) throw new Error('Dnes už formulář nemůže odeslat další zprávu. Zkuste to prosím zítra.');
+
+    const site = formSite_(c);
+    const page = /^https:\/\//.test(String(p.page || '')) ? String(p.page).slice(0, 300) : '';
+    MailApp.sendEmail({
+      to: site.to,
+      replyTo: email,
+      name: site.name,
+      subject: 'Zpráva z webu ' + site.name + ': ' + name,
+      body: [
+        'Jméno: ' + name,
+        'E-mail: ' + email,
+        phone ? 'Telefon: ' + phone : null,
+        '',
+        message,
+        '',
+        '—',
+        'Odpovězte přímo na tento e-mail, odpověď půjde odesílateli.',
+        page ? 'Odesláno ze stránky ' + page : null,
+      ].filter(l => l !== null).join('\n'),
+    });
+    formLog_(client, type, 'odesláno');
+    return json_({ ok: true });
+  } catch (err) {
+    const msg = String(err.message || err);
+    formLog_(client, type, 'chyba: ' + msg);
+    return json_({ ok: false, message: msg });
+  }
+}
+
+/** Menu: sends a test message through the form of the selected client. The first run also asks for the permission to send e-mail. */
+function testFormSelected() {
+  const c = selectedClient_();
+  if (!c) return;
+  CacheService.getScriptCache().remove('form_site_' + c.client);
+  const site = formSite_(c);
+  MailApp.sendEmail({
+    to: site.to,
+    name: site.name,
+    subject: 'Zkouška formuláře: ' + site.name,
+    body: 'Formulář na webu ' + site.name + ' je propojený. Zprávy od návštěvníků budou chodit na ' + site.to + '.',
+  });
+  formLog_(c.client, 'kontakt', 'zkouška odeslána');
+  SpreadsheetApp.getUi().alert('Zkušební zpráva odešla na ' + site.to + '.\nDnes lze ještě odeslat ' + MailApp.getRemainingDailyQuota() + ' e-mailů.');
+}
+
+/** Recipient and site name from the client's sheet (tab site), cached for 10 minutes. */
+function formSite_(c) {
+  const cache = CacheService.getScriptCache(), key = 'form_site_' + c.client;
+  const hit = cache.get(key);
+  if (hit) return JSON.parse(hit);
+  const files = DriveApp.getFolderById(idFrom_(c.folder)).getFilesByType(MimeType.GOOGLE_SHEETS);
+  if (!files.hasNext()) throw new Error('Ve složce webu není tabulka.');
+  const tab = SpreadsheetApp.openById(files.next().getId()).getSheetByName('site');
+  if (!tab) throw new Error('V tabulce webu chybí list site.');
+  const set = {};
+  tab.getRange(1, 1, Math.max(tab.getLastRow(), 1), 2).getValues().forEach(r => { set[String(r[0]).trim().toLowerCase()] = String(r[1]).trim(); });
+  const to = (set.form_email || '').split(/[,;\s]+/).filter(Boolean);
+  if (!to.length || !to.every(isEmail_)) throw new Error('Web nemá v listu site platnou adresu form_email.');
+  const site = { to: to.join(','), name: (set.site_name || c.name || c.client).slice(0, 80) };
+  cache.put(key, JSON.stringify(site), 600);
+  return site;
+}
+
+function formRate_(client) {
+  const cache = CacheService.getScriptCache(), key = 'form_rate_' + client + '_' + Math.floor(Date.now() / 3600000);
+  const n = Number(cache.get(key) || 0) + 1;
+  cache.put(key, String(n), 3700);
+  return n <= FORM_LIMIT_PER_HOUR;
+}
+
+/** One row per message: when, which site, result. No personal data. */
+function formLog_(client, type, result) {
+  try {
+    const ss = SpreadsheetApp.getActive();
+    let sh = ss.getSheetByName(FORM_LOG_TAB);
+    if (!sh) { sh = ss.insertSheet(FORM_LOG_TAB); sh.appendRow(['kdy', 'web', 'formulář', 'výsledek']); sh.setFrozenRows(1); }
+    sh.appendRow([new Date(), client || '?', type || '', String(result).slice(0, 200)]);
+  } catch (e) { /* the log must never stop a message */ }
+}
+
+const oneLine_ = (v, max) => String(v || '').replace(/\s+/g, ' ').trim().slice(0, max);
+const isEmail_ = v => /^[^\s@<>,;]+@[^\s@<>,;]+\.[^\s@<>,;]{2,}$/.test(String(v || ''));
+const json_ = o => ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
+
 // ---------- helpers ----------
 
 function dispatch_(payload) {
   need_(['GITHUB_TOKEN', 'GITHUB_REPO']);
+  // the published pages send their contact forms to this script's web app
+  if (PROPS.getProperty('WEBAPP_URL')) payload = Object.assign({ form: PROPS.getProperty('WEBAPP_URL') }, payload);
   const res = UrlFetchApp.fetch('https://api.github.com/repos/' + PROPS.getProperty('GITHUB_REPO') + '/dispatches', {
     method: 'post',
     contentType: 'application/json',

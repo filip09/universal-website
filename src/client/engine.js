@@ -480,6 +480,37 @@
     t.tabIndex = 0; t.setAttribute('role', 'button'); t.setAttribute('aria-label', 'Zvětšit fotku');
   });
 
+  // ---------- forms ----------
+  // Sent with fetch as a simple form post (no custom headers, so no CORS preflight)
+  // to the platform's Apps Script, which answers with JSON.
+  const loadedAt = Date.now();
+  stack.querySelectorAll('form.uw-form').forEach(f => { f.elements.t.value = String(loadedAt); });
+  stack.addEventListener('submit', async e => {
+    const f = e.target.closest('form.uw-form');
+    if (!f) return;
+    e.preventDefault();
+    if (f.classList.contains('is-busy')) return;
+    if (!f.checkValidity()) { f.classList.add('was-checked'); f.reportValidity(); return; }
+    const status = f.querySelector('.f-status'), btn = f.querySelector('button[type="submit"]');
+    const say = (text, kind) => { status.textContent = text; status.dataset.kind = kind || ''; };
+    if (!f.dataset.endpoint) { say(f.dataset.err, 'err'); return; }
+    const data = new URLSearchParams(new FormData(f));
+    data.set('page', location.href);
+    f.classList.add('is-busy'); btn.disabled = true; say(f.dataset.sending);
+    const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 20000);
+    try {
+      const res = await fetch(f.dataset.endpoint, { method: 'POST', body: data, signal: ctrl.signal });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok || !out.ok) throw new Error(out.message || 'failed');
+      f.classList.add('is-sent');
+      say(f.dataset.ok, 'ok');
+    } catch (err) {
+      say(f.dataset.err, 'err');
+    } finally {
+      clearTimeout(timer); f.classList.remove('is-busy'); btn.disabled = false;
+    }
+  });
+
   // ---------- start ----------
   try { history.replaceState({ id: pages[cur].dataset.id }, ''); } catch (e) {}
   setMark(cur);

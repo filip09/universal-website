@@ -248,11 +248,13 @@ ${field('message', t.message, `<textarea id="${id('message')}" name="message" re
   }
 
   // A Google map of an address: `mapa:` uses site › address, `mapa: Some street 1`
-  // shows another place. No API key needed. The iframe loads only when its page
-  // comes forward (engine.js), so it does not slow the first page down.
+  // shows another place. No API key needed. Nothing is loaded from Google until the
+  // visitor clicks: the click is their consent to Google's cookies (engine.js).
   const MAP_TEXT = {
-    cs: { open: 'Otevřít v Google Mapách', route: 'Naplánovat cestu', title: 'Mapa' },
-    en: { open: 'Open in Google Maps', route: 'Get directions', title: 'Map' },
+    cs: { open: 'Otevřít v Google Mapách', route: 'Naplánovat cestu', title: 'Mapa', show: 'Zobrazit mapu',
+          consent: 'Mapu poskytuje Google, který při jejím zobrazení používá cookies. Kliknutím na Zobrazit mapu s tím souhlasíte.' },
+    en: { open: 'Open in Google Maps', route: 'Get directions', title: 'Map', show: 'Show map',
+          consent: 'The map is provided by Google, which uses cookies when it is shown. By clicking Show map you agree to this.' },
   };
   function renderMap(value, style, where) {
     const address = str(value) || model.site.address;
@@ -264,7 +266,7 @@ ${field('message', t.message, `<textarea id="${id('message')}" name="message" re
     const src = `https://www.google.com/maps?q=${q}&z=${z}&hl=${lang}&output=embed`;
     const open = `https://www.google.com/maps/search/?api=1&query=${q}`;
     const route = `https://www.google.com/maps/dir/?api=1&destination=${q}`;
-    return `<figure class="map map-${style || 'dark'}"><div class="map-frame"><iframe data-src="${esc(src)}" title="${esc(t.title + ': ' + address)}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe></div>`
+    return `<figure class="map map-${style || 'dark'}"><div class="map-frame"><button type="button" class="map-consent" data-map="${esc(src)}" data-title="${esc(t.title + ': ' + address)}"><span class="map-pin" aria-hidden="true"></span><span class="map-place">${esc(address)}</span><span class="btn">${t.show}</span><span class="map-note">${t.consent}</span></button></div>`
       + `<figcaption><span class="map-addr">${esc(address)}</span><span class="map-links"><a href="${esc(open)}" target="_blank" rel="noopener">${t.open}</a><a href="${esc(route)}" target="_blank" rel="noopener">${t.route} →</a></span></figcaption></figure>`;
   }
 

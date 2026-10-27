@@ -38,7 +38,6 @@
     if (hydrated.has(p)) return;
     hydrated.add(p);
     p.querySelectorAll('[data-srcset]').forEach(el => { el.srcset = absSet(el.dataset.srcset); el.removeAttribute('data-srcset'); });
-    p.querySelectorAll('iframe[data-src]').forEach(el => { el.src = el.dataset.src; el.removeAttribute('data-src'); });
     p.querySelectorAll('img[data-src]').forEach(el => { el.src = abs(el.dataset.src); el.removeAttribute('data-src'); });
     p.querySelectorAll('[data-bg]').forEach(el => { el.style.backgroundImage = `url("${abs(el.dataset.bg)}")`; el.removeAttribute('data-bg'); });
   }
@@ -86,6 +85,18 @@
     f.allowFullscreen = true;
     f.title = btn.getAttribute('aria-label') || 'Video';
     f._facade = btn;
+    btn.replaceWith(f);
+  });
+
+  // map facades: Google loads (and may set cookies) only after the visitor agrees by clicking
+  stack.addEventListener('click', e => {
+    const btn = e.target.closest('.map-consent[data-map]');
+    if (!btn) return;
+    const f = document.createElement('iframe');
+    f.src = btn.dataset.map;
+    f.title = btn.dataset.title || 'Map';
+    f.referrerPolicy = 'no-referrer-when-downgrade';
+    f.allowFullscreen = true;
     btn.replaceWith(f);
   });
 

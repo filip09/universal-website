@@ -27,7 +27,9 @@ function vimeoId(u) { const m = u.match(/vimeo\.com\/(?:video\/)?(\d+)/); return
 // The main language lives at the root (prefix ''), the others under 'en/' etc.
 // Assets and media are always shared at the root. alts: Map of main-language
 // page id -> { lang: path from the site root } for every language of the site.
-const LANG_NAMES = { cs: 'Čeština', en: 'English', de: 'Deutsch', sk: 'Slovenčina', pl: 'Polski', fr: 'Français', es: 'Español', it: 'Italiano', uk: 'Українська', ru: 'Русский', zh: '中文' };
+// how each language names itself in the footer link
+const LANG_NAMES = { cs: 'Česky', en: 'English', de: 'Deutsch', sk: 'Slovensky', pl: 'Polski', fr: 'Français', es: 'Español', it: 'Italiano', uk: 'Українська', ru: 'Русский', zh: '中文' };
+const LANGS_SLOT = '%%LANGS%%'; // replaced per output file with links to the other languages
 
 export async function renderSite({ model, media, outDir, cacheDir, warn, buildId, form = {}, prefix = '', clean = true, alts = null }) {
   if (clean) await rm(outDir, { recursive: true, force: true });
@@ -307,7 +309,7 @@ ${field('message', t.message, `<textarea id="${id('message')}" name="message" re
   const footerText = model.site.footer || 'drobné: © {rok} {web}';
   const credit = `<a class="platform-credit" href="https://filipmracek.com" target="_blank" rel="noopener">platform by filipmracek.com</a>`;
   let footLine = (await renderContent(footerText, 'site › footer')).trim();
-  footLine = /<\/p>$/.test(footLine) ? footLine.replace(/<\/p>$/, ` · ${credit}</p>`) : `${footLine}<p>${credit}</p>`;
+  footLine = /<\/p>$/.test(footLine) ? footLine.replace(/<\/p>$/, ` · ${credit}${LANGS_SLOT}</p>`) : `${footLine}<p>${credit}${LANGS_SLOT}</p>`;
   let footerHtml, pageFoot;
   const setFoot = () => { footerHtml = `<footer class="site-foot" id="site-foot">${footLine}</footer>`; pageFoot = `<footer class="page-foot">${footLine}</footer>`; };
   // colour profile: decides page colours, tab shades, text colours and the background
@@ -402,11 +404,9 @@ ${field('message', t.message, `<textarea id="${id('message')}" name="message" re
     `<a class="mark" href="${ROOT}${prefix}${urlOf(p.id)}" data-id="${p.id}" style="${colorStyle(i)}">${esc(p.label)}</a>`).join('');
   // language switcher: links to the same page in the other languages
   const altOf = p => (multi && alts.get(p.base || p.id)) || {};
-  const langNav = p => !multi ? '' : `<div class="langs" id="langs">${langs.map(l => {
-    const to = altOf(p)[l];
-    if (l === lang) return `<span class="lang is-current" lang="${l}" aria-current="true" title="${esc(LANG_NAMES[l] || l)}">${l.toUpperCase()}</span>`;
-    return to === undefined ? '' : `<a class="lang" lang="${l}" hreflang="${l}" data-lang="${l}" href="${ROOT}${to}" title="${esc(LANG_NAMES[l] || l)}">${l.toUpperCase()}</a>`;
-  }).join('')}</div>`;
+  // language switch: a quiet link in the footer to the same page in the other languages
+  const langLinks = p => !multi ? '' : langs.filter(l => l !== lang && altOf(p)[l] !== undefined)
+    .map(l => ` · <a class="lang-link" lang="${l}" hreflang="${l}" data-lang="${l}" href="${ROOT}${altOf(p)[l]}">${esc(LANG_NAMES[l] || l.toUpperCase())}</a>`).join('');
   // First visit: a browser set to another of the site's languages goes there; a choice
   // made in the switcher is remembered and wins. Search-engine bots are left alone.
   const langScript = p => !multi ? '' : `<script>(function(){try{var A=${JSON.stringify(Object.fromEntries(Object.entries(altOf(p)).map(([l, to]) => [l, '%%ROOT%%' + to]))).replace(/</g, '\\u003c')},C=${JSON.stringify(lang)},M=${JSON.stringify(langs[0])};if(/bot|crawl|spider|slurp|lighthouse|headless|preview/i.test(navigator.userAgent))return;var s=null;try{s=localStorage.getItem('uw-lang')}catch(e){}if(s){if(s!==C&&A[s])location.replace(A[s]+location.hash);return}if(C!==M)return;var b=(navigator.languages||[navigator.language||'']);for(var i=0;i<b.length;i++){var l=String(b[i]).slice(0,2).toLowerCase();if(l===C)return;if(A[l]){location.replace(A[l]+location.hash);return}}}catch(e){}})();</script>`;
@@ -458,13 +458,13 @@ ${head}
 <main class="stage" id="stage"><div class="stack" id="stack">
 ${stack}
 </div></main>
-<nav class="marks" id="marks" aria-label="${lang === 'cs' ? 'Stránky' : 'Pages'}">${navHtml}${langNav(p)}</nav>
+<nav class="marks" id="marks" aria-label="${lang === 'cs' ? 'Stránky' : 'Pages'}">${navHtml}</nav>
 ${footerHtml}
 </body>
 </html>`;
     const full = path.join(outDir, file);
     await mkdir(path.dirname(full), { recursive: true });
-    await writeFile(full, html.split(ROOT).join(root));
+    await writeFile(full, html.split(LANGS_SLOT).join(langLinks(p)).split(ROOT).join(root));
   }
 
   const up = '../'.repeat(prefix.split('/').filter(Boolean).length);

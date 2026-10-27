@@ -12,7 +12,7 @@
   const N = pages.length;
   const marksEl = document.getElementById('marks');
   const marks = [...marksEl.querySelectorAll('.mark')];
-  const langLinks = [...document.querySelectorAll('#langs a.lang')];
+  const langLinks = [...document.querySelectorAll('a.lang-link')];
   const idx = id => pages.findIndex(p => p.dataset.id === id);
   if (!N) return;
 

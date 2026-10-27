@@ -195,7 +195,7 @@ LANG_LINES = [
     "visible_en: no skryje stránku nebo položku jen v angličtině.",
     "Obrázky, barvy, pořadí a nastavení vzhledu jsou společné. V content_en stačí napsat stejné obrázky a galerie.",
     "Chybí-li překlad, zobrazí se původní text a v listu stav se objeví upozornění.",
-    "Návštěvník přepíná jazyk u záložek. Má-li prohlížeč nastavený jiný jazyk webu, otevře se mu napoprvé rovnou ten. Jeho volba se pamatuje.",
+    "Jazyk se dá přepnout odkazem v patičce (English / Česky). Má-li prohlížeč nastavený jiný jazyk webu, otevře se mu napoprvé rovnou ten. Jeho volba se pamatuje.",
     "V site můžete přeložit i site_name_en, description_en a footer_en.",
 ]
 

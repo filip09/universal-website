@@ -171,6 +171,7 @@ export async function renderSite({ model, media, outDir, cacheDir, warn, buildId
           break;
         }
         case 'form': html.push(renderForm(value, where)); break;
+        case 'map': html.push(renderMap(value, style, where)); break;
         case 'embed': {
           const e = model.embeds.get(value);
           if (!e) { warn(`${where}: vložený prvek „${value}“ není v listu embeds.`); break; }
@@ -244,6 +245,27 @@ ${field('message', t.message, `<textarea id="${id('message')}" name="message" re
     }
     if (!ok) return null;
     return pipe.image({ key: 'yt:' + id, name: `youtube-${id}.jpg`, path: `YouTube ${id}`, fetch: () => readF(file) });
+  }
+
+  // A Google map of an address: `mapa:` uses site › address, `mapa: Some street 1`
+  // shows another place. No API key needed. The iframe loads only when its page
+  // comes forward (engine.js), so it does not slow the first page down.
+  const MAP_TEXT = {
+    cs: { open: 'Otevřít v Google Mapách', route: 'Naplánovat cestu', title: 'Mapa' },
+    en: { open: 'Open in Google Maps', route: 'Get directions', title: 'Map' },
+  };
+  function renderMap(value, style, where) {
+    const address = str(value) || model.site.address;
+    if (!address) { warnOnce('map:' + where, `${where}: mapa nemá adresu. Vyplňte address v listu site, nebo napište adresu za mapa:.`); return ''; }
+    const z = Math.min(21, Math.max(1, parseInt(model.site.mapZoom, 10) || 15));
+    const q = encodeURIComponent(address);
+    const lang = model.site.language === 'en' ? 'en' : 'cs';
+    const t = MAP_TEXT[lang];
+    const src = `https://www.google.com/maps?q=${q}&z=${z}&hl=${lang}&output=embed`;
+    const open = `https://www.google.com/maps/search/?api=1&query=${q}`;
+    const route = `https://www.google.com/maps/dir/?api=1&destination=${q}`;
+    return `<figure class="map map-${style || 'dark'}"><div class="map-frame"><iframe data-src="${esc(src)}" title="${esc(t.title + ': ' + address)}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe></div>`
+      + `<figcaption><span class="map-addr">${esc(address)}</span><span class="map-links"><a href="${esc(open)}" target="_blank" rel="noopener">${t.open}</a><a href="${esc(route)}" target="_blank" rel="noopener">${t.route} →</a></span></figcaption></figure>`;
   }
 
   async function renderVideo(value, style, where) {

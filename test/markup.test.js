@@ -61,3 +61,8 @@ test('mezera: sizes and keyword', () => {
   assert.deepEqual(p.map(x => x.kw), ['heading', 'space', 'text', 'space', 'space']);
   assert.deepEqual(p.filter(x => x.kw === 'space').map(x => spaceSize(x.value)), ['m', 'l', 's']);
 });
+
+test('mapa: keyword with and without address', () => {
+  const p = parseCell('mapa:\nmap: Vinohradská 12, Praha | light');
+  assert.deepEqual(p.map(x => [x.kw, x.value, x.style ?? null]), [['map', '', ''], ['map', 'Vinohradská 12, Praha', 'light']]);
+});

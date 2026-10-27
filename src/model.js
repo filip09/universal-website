@@ -121,6 +121,9 @@ export function buildModel(tabs, warn) {
       // Where contact-form messages go. Only the Apps Script reads it when a message
       // arrives; the address never appears in the published pages.
       formEmail: str(site.form_email),
+      // Default address for `mapa:` blocks, and the map's zoom (1–21).
+      address: str(site.address),
+      mapZoom: str(site.map_zoom),
     },
     styles,
     pages,

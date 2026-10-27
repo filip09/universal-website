@@ -38,6 +38,7 @@
     if (hydrated.has(p)) return;
     hydrated.add(p);
     p.querySelectorAll('[data-srcset]').forEach(el => { el.srcset = absSet(el.dataset.srcset); el.removeAttribute('data-srcset'); });
+    p.querySelectorAll('iframe[data-src]').forEach(el => { el.src = el.dataset.src; el.removeAttribute('data-src'); });
     p.querySelectorAll('img[data-src]').forEach(el => { el.src = abs(el.dataset.src); el.removeAttribute('data-src'); });
     p.querySelectorAll('[data-bg]').forEach(el => { el.style.backgroundImage = `url("${abs(el.dataset.bg)}")`; el.removeAttribute('data-bg'); });
   }

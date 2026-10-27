@@ -13,6 +13,7 @@ export const KEYWORDS = {
   list: 'list', seznam: 'list',
   embed: 'embed', 'vložit': 'embed', vlozit: 'embed',
   form: 'form', 'formulář': 'form', formular: 'form',
+  map: 'map', mapa: 'map',
   // text formatting
   lead: 'lead', 'úvod': 'lead', uvod: 'lead',
   heading: 'heading', nadpis: 'heading',
@@ -33,6 +34,7 @@ export const STYLES = {
   video: ['normal', 'wide'],
   list: ['steps', 'cards', 'bullets', 'faq'],
   embed: ['normal', 'full'],
+  map: ['dark', 'light'],
 };
 
 const escapeRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

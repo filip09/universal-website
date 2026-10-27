@@ -146,6 +146,8 @@ sheet("site", [("setting", 22), ("value", 46), ("co to dělá", 58)], [
     ("favicon", "img-favicon", "Malá ikona v záložce prohlížeče (id z media)."),
     ("footer", "drobné: © {rok} {web}", "Patička na každé stránce. Stejný zápis jako content. {rok} je vždy aktuální rok, {web} je site_name. Prázdné = © rok a název webu."),
     ("form_email", "", "Kam chodí zprávy z formuláře (formulář: kontakt). Na webu se nezobrazí. Více adres oddělte čárkou."),
+    ("address", "", "Adresa pro mapu (mapa:), např. Vinohradská 12, Praha 2. Na webu se zobrazí pod mapou."),
+    ("map_zoom", "15", "Přiblížení mapy: 1 = celý svět, 15 = ulice, 18 = dům."),
 ], note_cols=(2,), tab="6B5BFF")
 
 # ---------- styles ----------
@@ -272,6 +274,7 @@ table(["klíčové slovo", "anglicky", "co vytvoří", "příklad"], [
     ("poznámka:", "note:", "Rámeček s poznámkou", "poznámka: Tabulka se čte při sestavení."),
     ("tlačítko:", "button:", "Tlačítko: popis -> odkaz", "tlačítko: Napište nám -> https://example.com"),
     ("oddělovač:", "divider:", "Tenká čára; za dvojtečkou nic", "oddělovač:"),
+    ("mapa:", "map:", "Mapa Google. Prázdné = adresa z listu site, nebo jiná adresa; | light = světlá", "mapa:"),
     ("mezera:", "space:", "Volné místo. Prázdné = běžná, nebo velká / malá", "mezera: velká"),
     ("drobné:", "small:", "Drobný text", "drobné: © {rok} {web}"),
 ], code_first=True)

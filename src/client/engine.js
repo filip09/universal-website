@@ -13,6 +13,7 @@
   const marksEl = document.getElementById('marks');
   const marks = [...marksEl.querySelectorAll('.mark')];
   const langLinks = [...document.querySelectorAll('a.lang-link')];
+  const canHover = matchMedia('(hover: hover) and (pointer: fine)').matches;
   const idx = id => pages.findIndex(p => p.dataset.id === id);
   if (!N) return;
 
@@ -229,8 +230,13 @@
   // ---------- input ----------
   marks.forEach((m, i) => {
     m.addEventListener('click', e => { if (e.metaKey || e.ctrlKey || e.shiftKey) return; e.preventDefault(); go(i); });
-    m.addEventListener('mouseenter', () => peek(i));
-    m.addEventListener('mouseleave', () => peek(null));
+    // Hover peek only for a real mouse. On phones a tap also fires mouseenter, and
+    // because peek moves the stack, iOS treated the first tap as a hover and
+    // swallowed the click, so the tab needed a second tap.
+    if (canHover) {
+      m.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') peek(i); });
+      m.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') peek(null); });
+    }
   });
   // internal links between pages turn the page too
   stack.addEventListener('click', e => {

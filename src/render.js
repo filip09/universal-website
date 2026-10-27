@@ -23,9 +23,18 @@ function youtubeId(u) {
 }
 function vimeoId(u) { const m = u.match(/vimeo\.com\/(?:video\/)?(\d+)/); return m ? m[1] : ''; }
 
-export async function renderSite({ model, media, outDir, cacheDir, warn, buildId, form = {} }) {
-  await rm(outDir, { recursive: true, force: true });
+// Several languages: renderSite runs once per language into the same outDir.
+// The main language lives at the root (prefix ''), the others under 'en/' etc.
+// Assets and media are always shared at the root. alts: Map of main-language
+// page id -> { lang: path from the site root } for every language of the site.
+const LANG_NAMES = { cs: 'Čeština', en: 'English', de: 'Deutsch', sk: 'Slovenčina', pl: 'Polski', fr: 'Français', es: 'Español', it: 'Italiano', uk: 'Українська', ru: 'Русский', zh: '中文' };
+
+export async function renderSite({ model, media, outDir, cacheDir, warn, buildId, form = {}, prefix = '', clean = true, alts = null }) {
+  if (clean) await rm(outDir, { recursive: true, force: true });
   await mkdir(outDir, { recursive: true });
+  const lang = model.site.language;
+  const langs = model.site.languages || [lang];
+  const multi = langs.length > 1 && alts;
   const pipe = new ImagePipeline({ cacheDir, outDir, warn });
   setVariables({ year: String(new Date().getFullYear()), site: model.site.name });
   const warnedIds = new Set();
@@ -299,14 +308,26 @@ ${field('message', t.message, `<textarea id="${id('message')}" name="message" re
   const credit = `<a class="platform-credit" href="https://filipmracek.com" target="_blank" rel="noopener">platform by filipmracek.com</a>`;
   let footLine = (await renderContent(footerText, 'site › footer')).trim();
   footLine = /<\/p>$/.test(footLine) ? footLine.replace(/<\/p>$/, ` · ${credit}</p>`) : `${footLine}<p>${credit}</p>`;
-  const footerHtml = `<footer class="site-foot" id="site-foot">${footLine}</footer>`;
-  const pageFoot = `<footer class="page-foot">${footLine}</footer>`;
+  let footerHtml, pageFoot;
+  const setFoot = () => { footerHtml = `<footer class="site-foot" id="site-foot">${footLine}</footer>`; pageFoot = `<footer class="page-foot">${footLine}</footer>`; };
   // colour profile: decides page colours, tab shades, text colours and the background
   const prof = resolveProfile(model.styles.color_profile, model.pages, { sat: num(model.styles.hue_saturation, 70), warn });
   const colorStyle = i => { const c = prof.pages[i]; return `--h:${c.h};--sat:${c.s}%;--ts:${c.ts}%;--tl:${c.tl}%;--gs:${c.gs ?? 85}%`; };
+  // In another language, internal links written as /<id>/ (either the main-language
+  // id or this language's id) lead to this language's version of that page.
+  const slugOf = new Map();
+  for (const p of model.pages) { slugOf.set(p.base || p.id, p.id); slugOf.set(p.id, p.id); }
+  const localize = html => !prefix ? html : html.replace(/href="\/([a-z0-9-]*)\/?(#[^"]*)?"/g, (m, id, hash = '') => {
+    if (id === '') return `href="/${prefix}${hash}"`;
+    if (!slugOf.has(id)) return m;
+    const s = slugOf.get(id);
+    return `href="/${prefix}${s === model.site.home ? '' : s + '/'}${hash}"`;
+  });
+  if (prefix) footLine = localize(footLine);
+  setFoot();
   const articles = [];
   for (const [i, p] of model.pages.entries()) {
-    const body = await renderContent(p.content, `pages › ${p.id}`);
+    const body = localize(await renderContent(p.content, `pages › ${p.id}`));
     articles.push({
       page: p,
       html: `<article class="page" id="p-${p.id}" data-id="${p.id}" style="${colorStyle(i)}" aria-labelledby="t-${p.id}"><div class="scroll"><div class="inner"><h1 id="t-${p.id}">${inline(p.title)}</h1>\n${body}\n${pageFoot}</div></div></article>`,
@@ -343,7 +364,8 @@ ${field('message', t.message, `<textarea id="${id('message')}" name="message" re
 
   const config = {
     home: model.site.home,
-    pages: model.pages.map((p, i) => ({ id: p.id, hue: prof.pages[i].h, title: p.title, field: prof.pages[i].field })),
+    pages: model.pages.map((p, i) => ({ id: p.id, hue: prof.pages[i].h, title: p.title, field: prof.pages[i].field, alt: multi ? alts.get(p.base || p.id) : undefined })),
+    lang,
     profile: prof.kind,
     siteName: model.site.name,
     turn: {
@@ -377,7 +399,17 @@ ${field('message', t.message, `<textarea id="${id('message')}" name="message" re
 
   const urlOf = id => (id === model.site.home ? '' : `${id}/`);
   const navHtml = model.pages.map((p, i) =>
-    `<a class="mark" href="${ROOT}${urlOf(p.id)}" data-id="${p.id}" style="${colorStyle(i)}">${esc(p.label)}</a>`).join('');
+    `<a class="mark" href="${ROOT}${prefix}${urlOf(p.id)}" data-id="${p.id}" style="${colorStyle(i)}">${esc(p.label)}</a>`).join('');
+  // language switcher: links to the same page in the other languages
+  const altOf = p => (multi && alts.get(p.base || p.id)) || {};
+  const langNav = p => !multi ? '' : `<div class="langs" id="langs">${langs.map(l => {
+    const to = altOf(p)[l];
+    if (l === lang) return `<span class="lang is-current" lang="${l}" aria-current="true" title="${esc(LANG_NAMES[l] || l)}">${l.toUpperCase()}</span>`;
+    return to === undefined ? '' : `<a class="lang" lang="${l}" hreflang="${l}" data-lang="${l}" href="${ROOT}${to}" title="${esc(LANG_NAMES[l] || l)}">${l.toUpperCase()}</a>`;
+  }).join('')}</div>`;
+  // First visit: a browser set to another of the site's languages goes there; a choice
+  // made in the switcher is remembered and wins. Search-engine bots are left alone.
+  const langScript = p => !multi ? '' : `<script>(function(){try{var A=${JSON.stringify(Object.fromEntries(Object.entries(altOf(p)).map(([l, to]) => [l, '%%ROOT%%' + to]))).replace(/</g, '\\u003c')},C=${JSON.stringify(lang)},M=${JSON.stringify(langs[0])};if(/bot|crawl|spider|slurp|lighthouse|headless|preview/i.test(navigator.userAgent))return;var s=null;try{s=localStorage.getItem('uw-lang')}catch(e){}if(s){if(s!==C&&A[s])location.replace(A[s]+location.hash);return}if(C!==M)return;var b=(navigator.languages||[navigator.language||'']);for(var i=0;i<b.length;i++){var l=String(b[i]).slice(0,2).toLowerCase();if(l===C)return;if(A[l]){location.replace(A[l]+location.hash);return}}}catch(e){}})();</script>`;
 
   async function writePage(front, file, root, { is404 = false } = {}) {
     const p = front.page;
@@ -389,13 +421,19 @@ ${field('message', t.message, `<textarea id="${id('message')}" name="message" re
     const title = p.id === model.site.home ? model.site.name : `${p.title} · ${model.site.name}`;
     const desc = p.description || model.site.description;
     const share = (await shareUrl(p.shareImage)) || defaultShare;
-    const canonical = model.site.domain && !is404 ? `https://${model.site.domain}/${urlOf(p.id)}` : '';
+    const canonical = model.site.domain && !is404 ? `https://${model.site.domain}/${prefix}${urlOf(p.id)}` : '';
+    const hreflang = multi && model.site.domain && !is404
+      ? Object.entries(altOf(p)).map(([l, to]) => `<link rel="alternate" hreflang="${l}" href="https://${model.site.domain}/${to}">`).join('')
+        + (altOf(p)[langs[0]] !== undefined ? `<link rel="alternate" hreflang="x-default" href="https://${model.site.domain}/${altOf(p)[langs[0]]}">` : '')
+      : '';
     const head = [
       '<meta charset="utf-8">',
       '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">',
       `<title>${esc(title)}</title>`,
       desc && `<meta name="description" content="${esc(desc)}">`,
       canonical && `<link rel="canonical" href="${canonical}">`,
+      hreflang,
+      !is404 && langScript(p),
       `<meta property="og:title" content="${esc(title)}">`,
       desc && `<meta property="og:description" content="${esc(desc)}">`,
       share && `<meta property="og:image" content="${share}"><meta name="twitter:card" content="summary_large_image">`,
@@ -415,12 +453,12 @@ ${field('message', t.message, `<textarea id="${id('message')}" name="message" re
 <head>
 ${head}
 </head>
-<body${bodyCls} data-front="${p.id}" data-root="${ROOT}" data-build="${buildId}">
+<body${bodyCls} data-front="${p.id}" data-root="${ROOT}" data-pages="${ROOT}${prefix}" data-build="${buildId}">
 <canvas id="field" aria-hidden="true"></canvas><div class="grain" aria-hidden="true"></div>
 <main class="stage" id="stage"><div class="stack" id="stack">
 ${stack}
 </div></main>
-<nav class="marks" id="marks" aria-label="Stránky">${navHtml}</nav>
+<nav class="marks" id="marks" aria-label="${lang === 'cs' ? 'Stránky' : 'Pages'}">${navHtml}${langNav(p)}</nav>
 ${footerHtml}
 </body>
 </html>`;
@@ -429,25 +467,23 @@ ${footerHtml}
     await writeFile(full, html.split(ROOT).join(root));
   }
 
+  const up = '../'.repeat(prefix.split('/').filter(Boolean).length);
   for (const a of articles) {
     const isHome = a.page.id === model.site.home;
-    await writePage(a, isHome ? 'index.html' : `${a.page.id}/index.html`, isHome ? './' : '../');
+    await writePage(a, prefix + (isHome ? 'index.html' : `${a.page.id}/index.html`), up + (isHome ? './' : '../'));
   }
+  const urls = model.pages.map(p => prefix + urlOf(p.id));
+  if (prefix) return { pages: articles.length, images: pipe.stats, urls };
   const homeArticle = articles.find(a => a.page.id === model.site.home) || articles[0];
   if (homeArticle) await writePage(homeArticle, '404.html', '/', { is404: true });
 
-  // caching rules and sitemap
+  // caching rules (the sitemap is written by build.js, once for all languages)
   await writeFile(path.join(outDir, '_headers'), [
     '/assets/*', '  Cache-Control: public, max-age=31536000, immutable',
     '/media/*', '  Cache-Control: public, max-age=31536000, immutable',
     '/*', '  X-Content-Type-Options: nosniff', '  Referrer-Policy: strict-origin-when-cross-origin', '',
   ].join('\n'));
-  if (model.site.domain) {
-    const urls = model.pages.map(p => `<url><loc>https://${model.site.domain}/${urlOf(p.id)}</loc></url>`).join('');
-    await writeFile(path.join(outDir, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`);
-    await writeFile(path.join(outDir, 'robots.txt'), `User-agent: *\nAllow: /\nSitemap: https://${model.site.domain}/sitemap.xml\n`);
-  }
-  return { pages: articles.length, images: pipe.stats };
+  return { pages: articles.length, images: pipe.stats, urls };
 }
 
 function mediaFile(model, media, ref) {

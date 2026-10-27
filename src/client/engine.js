@@ -5,11 +5,14 @@
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const body = document.body;
   const root = new URL(body.dataset.root || './', location.href);
+  // pages of this language live under data-pages (the root, or e.g. en/); media under data-root
+  const proot = new URL(body.dataset.pages || body.dataset.root || './', location.href);
   const stack = document.getElementById('stack');
   const pages = [...stack.querySelectorAll('.page')];
   const N = pages.length;
   const marksEl = document.getElementById('marks');
   const marks = [...marksEl.querySelectorAll('.mark')];
+  const langLinks = [...document.querySelectorAll('#langs a.lang')];
   const idx = id => pages.findIndex(p => p.dataset.id === id);
   if (!N) return;
 
@@ -21,9 +24,9 @@
   const K_FOC = 75 * SPEED, C_FOC = 16 * Math.sqrt(SPEED);
 
   // ---------- urls ----------
-  const urlOf = id => new URL(id === cfg.home ? '' : id + '/', root).href;
+  const urlOf = id => new URL(id === cfg.home ? '' : id + '/', proot).href;
   function idFromLocation() {
-    const rel = decodeURIComponent(location.pathname.slice(root.pathname.length)).replace(/\/(index\.html)?$/, '');
+    const rel = decodeURIComponent(location.pathname.slice(proot.pathname.length)).replace(/\/(index\.html)?$/, '');
     if (!rel) return cfg.home;
     return idx(rel) >= 0 ? rel : null;
   }
@@ -215,8 +218,13 @@
       const pg = cfg.pages[front];
       document.title = pg.id === cfg.home ? cfg.siteName : `${pg.title} · ${cfg.siteName}`;
       if (cfg.bg.follow) setFieldTarget(front);
+      // language switcher follows the page in front
+      if (pg.alt) langLinks.forEach(a => { const to = pg.alt[a.dataset.lang]; if (to !== undefined) a.href = new URL(to, root).href; });
     }
   }
+
+  // ---------- languages ----------
+  langLinks.forEach(a => a.addEventListener('click', () => { try { localStorage.setItem('uw-lang', a.dataset.lang); } catch (e) {} }));
 
   // ---------- input ----------
   marks.forEach((m, i) => {
@@ -229,8 +237,8 @@
     const a = e.target.closest('a[href]');
     if (!a || a.target === '_blank' || e.metaKey || e.ctrlKey) return;
     const u = new URL(a.href, location.href);
-    if (u.origin !== location.origin || !u.pathname.startsWith(root.pathname)) return;
-    const rel = u.pathname.slice(root.pathname.length).replace(/\/(index\.html)?$/, '');
+    if (u.origin !== location.origin || !u.pathname.startsWith(proot.pathname)) return;
+    const rel = u.pathname.slice(proot.pathname.length).replace(/\/(index\.html)?$/, '');
     const j = rel ? idx(rel) : idx(cfg.home);
     if (j >= 0 && !u.hash) { e.preventDefault(); go(j); }
   });

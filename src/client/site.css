@@ -189,6 +189,11 @@ figcaption{font-size:.85em;color:var(--muted);margin-top:8px}
 .mark:hover{transform:translateX(0);opacity:1;color:#fff;background:linear-gradient(90deg, hsla(var(--h),calc(var(--ts) * 1.07),calc(var(--tl) + 5%),.96), hsla(var(--h),calc(var(--ts) * .97),calc(var(--tl) - 4%),.92))}
 .mark[aria-current="page"]{transform:translateX(6px);opacity:1;background:linear-gradient(90deg, hsla(var(--h),calc(var(--ts) * 1.18),calc(var(--tl) + 10%),.98), hsla(var(--h),calc(var(--ts) * 1.07),calc(var(--tl) + 2%),.95));
   box-shadow:6px 8px 24px -10px rgba(0,0,0,.6), 0 0 28px -6px hsla(var(--h),var(--gs,85%),60%,.65)}
+.langs{display:flex;gap:2px;margin-top:10px;padding:3px;border-radius:999px;background:rgba(8,8,14,.38);border:1px solid var(--faint);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);align-self:flex-start}
+.lang{font:500 11px/1 var(--f-mono);letter-spacing:.1em;padding:7px 10px;border-radius:999px;color:var(--muted);text-decoration:none;transition:color .2s,background .2s}
+a.lang:hover{color:var(--text);background:rgba(255,255,255,.08)}
+.lang.is-current{color:var(--text);background:rgba(255,255,255,.12)}
+.tabs-left .langs{align-self:flex-end}
 .tabs-left .marks{left:auto;right:calc(50% + var(--pw) / 2 - 2px);align-items:flex-end}
 .tabs-left .mark{border-left:0;border-right:4px solid hsl(var(--h),var(--ts),calc(var(--tl) - 18%));border-radius:10px 0 0 10px;text-align:right;transform:translateX(10px)}
 .tabs-left .mark:hover{transform:translateX(0)}
@@ -233,6 +238,8 @@ figcaption{font-size:.85em;color:var(--muted);margin-top:8px}
     transform:translateY(-3px);padding:11px 14px 10px;opacity:.9}
   .mark:hover,.tabs-left .mark:hover{transform:translateY(-3px)}
   .mark[aria-current="page"],.tabs-left .mark[aria-current="page"]{transform:translateY(0);opacity:1}
+  .langs,.tabs-left .langs{margin:0 0 6px auto;flex:0 0 auto;align-self:center}
+  .lang{padding:7px 9px}
   .profile-tron .mark{border-bottom-color:var(--neon)}
   .gallery-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .lead{font-size:1.1em}

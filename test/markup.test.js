@@ -66,3 +66,23 @@ test('mapa: keyword with and without address', () => {
   const p = parseCell('mapa:\nmap: Vinohradská 12, Praha | light');
   assert.deepEqual(p.map(x => [x.kw, x.value, x.style ?? null]), [['map', '', ''], ['map', 'Vinohradská 12, Praha', 'light']]);
 });
+
+test('languages: _en columns, id_en, fallback with warning', () => {
+  const tabs = {
+    site: [{ setting: 'languages', value: 'cs, en' }, { setting: 'home_page', value: 'uvod' }, { setting: 'site_name', value: 'Web' }, { setting: 'site_name_en', value: 'Site' }],
+    pages: [
+      { id: 'uvod', title: 'Úvod', title_en: 'Home', content: 'text: Ahoj', content_en: 'text: Hello' },
+      { id: 'cena', id_en: 'pricing', title: 'Cena', content: 'text: Levně' },
+      { id: 'jen-cesky', title: 'Jen česky', content: 'text: x', visible_en: 'no' },
+    ],
+  };
+  const w = [];
+  const cs = buildModel(tabs, m => w.push(m));
+  const en = buildModel(tabs, m => w.push(m), { lang: 'en' });
+  assert.deepEqual(cs.pages.map(p => p.id), ['uvod', 'cena', 'jen-cesky']);
+  assert.deepEqual(en.pages.map(p => [p.id, p.base, p.title]), [['uvod', 'uvod', 'Home'], ['pricing', 'cena', 'Cena']]);
+  assert.equal(en.site.name, 'Site');
+  assert.equal(en.site.language, 'en');
+  assert.equal(en.pages[1].content, 'text: Levně');
+  assert.ok(w.some(m => m.includes('content_en')));
+});

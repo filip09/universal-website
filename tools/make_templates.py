@@ -138,7 +138,7 @@ sheet("embeds", [("id", 14), ("html", 70), ("height", 8), ("notes", 40)], [
 # ---------- site ----------
 sheet("site", [("setting", 22), ("value", 46), ("co to dělá", 58)], [
     ("site_name", "Universal Website", "Název v záložce prohlížeče a při sdílení odkazu."),
-    ("language", "cs", "Hlavní jazyk webu: cs nebo en. Ovlivní dělení slov a formát dat."),
+    ("languages", "cs", "Jazyky webu, první je hlavní: cs, nebo cs, en. Další jazyk píšete do sloupců s koncovkou _en (viz Návod › Více jazyků)."),
     ("domain", "www.example.com", "Kde web běží. Pro sdílené odkazy a mapu webu."),
     ("home_page", "intro", "Id stránky, která se otevře jako první."),
     ("description", "Web, kterým se listuje, postavený z tabulky.", "Výchozí text pro vyhledávače a náhledy odkazů."),
@@ -185,6 +185,19 @@ g.sheet_properties.tabColor = "1C1D2E"
 for col, w in zip("ABCD", (22, 18, 44, 58)):
     g.column_dimensions[col].width = w
 r = 1
+
+
+LANG_LINES = [
+    "V listu site napište do languages všechny jazyky, první je hlavní: cs, en. Hlavní jazyk je na adrese webu, další pod /en/.",
+    "Překlad píšete do sloupců s koncovkou jazyka vedle původních: tab_label_en, title_en, content_en, description_en v pages, content_en v texts, title_en a text_en v items, alt_en v media, html_en v embeds.",
+    "id_en v pages je adresa stránky v angličtině, např. why-us → /en/why-us/. Prázdné = stejné id jako v češtině.",
+    "Odkazy v překladu můžete psát s českým i anglickým id (/proc-s-nami/ i /why-us/), vždy povedou na anglickou verzi stránky.",
+    "visible_en: no skryje stránku nebo položku jen v angličtině.",
+    "Obrázky, barvy, pořadí a nastavení vzhledu jsou společné. V content_en stačí napsat stejné obrázky a galerie.",
+    "Chybí-li překlad, zobrazí se původní text a v listu stav se objeví upozornění.",
+    "Návštěvník přepíná jazyk u záložek. Má-li prohlížeč nastavený jiný jazyk webu, otevře se mu napoprvé rovnou ten. Jeho volba se pamatuje.",
+    "V site můžete přeložit i site_name_en, description_en a footer_en.",
+]
 
 
 def put(row, vals, font=BODY, fill=None):
@@ -349,6 +362,13 @@ for line in [
     "Výsledek se objeví v listu stav: kdy se publikovalo, jestli vše proběhlo a případná upozornění (třeba chybějící obrázek).",
     "Dokud nekliknete na Publikovat, návštěvníci vidí předchozí verzi. Upravovat tedy můžete v klidu.",
 ]:
+    put(r, ["•", line])
+    g.merge_cells(start_row=r, start_column=2, end_row=r, end_column=4)
+    g.row_dimensions[r].height = 28
+    r += 1
+
+section("Více jazyků")
+for line in LANG_LINES:
     put(r, ["•", line])
     g.merge_cells(start_row=r, start_column=2, end_row=r, end_column=4)
     g.row_dimensions[r].height = 28

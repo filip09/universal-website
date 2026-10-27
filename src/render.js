@@ -4,7 +4,7 @@ import { mkdir, writeFile, readFile, rm } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseCell, isToken, inline, paragraphs, escapeHtml as esc, safeUrl, STYLES, setVariables } from './markup.js';
+import { parseCell, isToken, inline, paragraphs, escapeHtml as esc, safeUrl, STYLES, setVariables, spaceSize } from './markup.js';
 import { ImagePipeline } from './images.js';
 import { fontHead } from './fonts.js';
 import { resolveProfile } from './profiles.js';
@@ -106,6 +106,7 @@ export async function renderSite({ model, media, outDir, cacheDir, warn, buildId
         case 'note': html.push(`<aside class="note">${paragraphs(value).map(p => `<p>${inline(p)}</p>`).join('')}</aside>`); break;
         case 'small': html.push(`<p class="small">${inline(value)}</p>`); break;
         case 'divider': html.push('<hr>'); break;
+        case 'space': html.push(`<div class="space space-${spaceSize(value)}" aria-hidden="true"></div>`); break;
         case 'button': {
           const [label, url] = value.includes('->') ? value.split('->').map(s => s.trim()) : [value, value];
           const href = safeUrl(url);

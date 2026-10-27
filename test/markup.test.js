@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseCell, inline } from '../src/markup.js';
+import { parseCell, inline, spaceSize } from '../src/markup.js';
 import { buildModel } from '../src/model.js';
 
 test('parts on one line, Czech and English keywords', () => {
@@ -54,4 +54,10 @@ test('variables: year, site name, (c)', async () => {
 test('form keyword in Czech and English', () => {
   assert.deepEqual(parseCell('formulář: kontakt')[0], { kw: 'form', value: 'kontakt', style: '' });
   assert.equal(parseCell('form: contact')[0].kw, 'form');
+});
+
+test('mezera: sizes and keyword', () => {
+  const p = parseCell('nadpis: A\nmezera:\ntext: B\nmezera: velká\nspace: small');
+  assert.deepEqual(p.map(x => x.kw), ['heading', 'space', 'text', 'space', 'space']);
+  assert.deepEqual(p.filter(x => x.kw === 'space').map(x => spaceSize(x.value)), ['m', 'l', 's']);
 });

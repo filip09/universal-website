@@ -22,6 +22,7 @@ export const KEYWORDS = {
   note: 'note', 'poznámka': 'note', poznamka: 'note',
   button: 'button', 'tlačítko': 'button', tlacitko: 'button',
   divider: 'divider', 'oddělovač': 'divider', oddelovac: 'divider',
+  space: 'space', spacer: 'space', mezera: 'space',
   small: 'small', 'drobné': 'small', drobne: 'small',
 };
 
@@ -100,3 +101,11 @@ export function inline(text) {
 
 /** Text with blank lines between paragraphs → array of paragraph strings. */
 export const paragraphs = text => String(text).split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+
+/** Size of a `mezera:` / `space:` block: empty = normal, "velká"/"large" = l, "malá"/"small" = s. */
+export function spaceSize(value) {
+  const v = String(value ?? '').trim().toLowerCase();
+  if (/^(velk[áa]|large|big|l)$/.test(v)) return 'l';
+  if (/^(mal[áa]|small|s)$/.test(v)) return 's';
+  return 'm';
+}

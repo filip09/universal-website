@@ -272,6 +272,7 @@ table(["klíčové slovo", "anglicky", "co vytvoří", "příklad"], [
     ("poznámka:", "note:", "Rámeček s poznámkou", "poznámka: Tabulka se čte při sestavení."),
     ("tlačítko:", "button:", "Tlačítko: popis -> odkaz", "tlačítko: Napište nám -> https://example.com"),
     ("oddělovač:", "divider:", "Tenká čára; za dvojtečkou nic", "oddělovač:"),
+    ("mezera:", "space:", "Volné místo. Prázdné = běžná, nebo velká / malá", "mezera: velká"),
     ("drobné:", "small:", "Drobný text", "drobné: © {rok} {web}"),
 ], code_first=True)
 r += 1

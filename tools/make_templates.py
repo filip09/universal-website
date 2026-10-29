@@ -367,6 +367,16 @@ for line in [
     g.row_dimensions[r].height = 28
     r += 1
 
+section("Široký obsah")
+for line in [
+    "Když se vložený prvek (embed) nevejde na šířku stránky, třeba široká tabulka, zobrazí se na počítači jako náhled s tlačítkem Zobrazit celé. Po kliknutí se otevře celý ve vrstvě nad knihou.",
+    "Nic se nenastavuje, web to pozná sám. Na mobilu se široký obsah posouvá prstem do strany.",
+]:
+    put(r, ["•", line])
+    g.merge_cells(start_row=r, start_column=2, end_row=r, end_column=4)
+    g.row_dimensions[r].height = 28
+    r += 1
+
 section("Více jazyků")
 for line in LANG_LINES:
     put(r, ["•", line])

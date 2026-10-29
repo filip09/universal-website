@@ -70,6 +70,7 @@
       box.appendChild(frag);
     });
     p.querySelectorAll('video[data-src]').forEach(v => { v.src = abs(v.dataset.src); v.removeAttribute('data-src'); });
+    requestAnimationFrame(() => checkWide(p));
   }
   function deactivate(p) {
     p.querySelectorAll('video').forEach(v => { try { v.pause(); } catch (e) {} });
@@ -103,6 +104,87 @@
     f.allowFullscreen = true;
     btn.replaceWith(f);
   });
+
+  // ---------- wide content ----------
+  // On a computer, an embed that does not fit the page width (a wide table, a
+  // widget) stays on the page as a preview fading out to the right, with a button.
+  // A click opens it in full on a glass sheet above the book. The content itself
+  // is moved, not copied, so forms and widgets keep what was typed. On phones
+  // nothing changes: wide content scrolls sideways as before.
+  const wideMQ = matchMedia('(min-width: 761px)');
+  const WIDE_T = ({
+    cs: { open: 'Zobrazit celé', close: 'Zavřít' }, sk: { open: 'Zobraziť celé', close: 'Zavrieť' },
+    de: { open: 'Ganz anzeigen', close: 'Schließen' }, en: { open: 'View in full', close: 'Close' },
+  })[cfg.lang] || { open: 'View in full', close: 'Close' };
+  const EXPAND = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M9.5 2.5h4v4M13.5 2.5 9 7M6.5 13.5h-4v-4M2.5 13.5 7 9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  function overflows(box) {
+    if (box.scrollWidth > box.clientWidth + 2) return true;
+    for (const el of box.querySelectorAll('*')) {
+      if (el.tagName === 'IFRAME' || el.closest('.wide-cover')) continue;
+      if (el.scrollWidth > el.clientWidth + 2 && getComputedStyle(el).overflowX !== 'visible') return true;
+    }
+    return false;
+  }
+  function checkWide(p) {
+    if (!p) return;
+    p.querySelectorAll('.embed').forEach(box => {
+      if (box._sheet || box.querySelector(':scope > template')) return;
+      const wide = wideMQ.matches && (box.classList.remove('is-wide'), overflows(box));
+      box.classList.toggle('is-wide', wide);
+      if (wide && !box._cover) {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'wide-cover'; b.setAttribute('aria-label', WIDE_T.open);
+        b.innerHTML = `<span class="wide-pill">${WIDE_T.open} ${EXPAND}</span>`;
+        b.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); openWide(box); });
+        box._cover = b;
+      }
+      if (wide && box._cover.parentNode !== box) box.appendChild(box._cover);
+      if (!wide && box._cover) box._cover.remove();
+    });
+  }
+  function openWide(box) {
+    if (document.querySelector('.lightbox')) return;
+    const page = box.closest('.page');
+    const kids = [...box.childNodes].filter(n => n !== box._cover);
+    box.style.minHeight = box.offsetHeight + 'px';
+    box._sheet = true;
+    box._cover.remove();
+    const ov = document.createElement('div');
+    ov.className = 'lightbox sheet-ov';
+    ov.innerHTML = `<div class="lb-back"></div><div class="sheet" role="dialog" aria-modal="true" tabindex="-1"><button type="button" class="sheet-x" aria-label="${WIDE_T.close}"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button><div class="sheet-body"></div></div>`;
+    const sheet = ov.querySelector('.sheet'), back = ov.querySelector('.lb-back');
+    if (page) sheet.setAttribute('style', page.getAttribute('style') || '');
+    ov.querySelector('.sheet-body').append(...kids);
+    document.body.appendChild(ov);
+    const dur = reduce ? 0 : 420;
+    back.animate([{ opacity: 0 }, { opacity: 1 }], { duration: dur, easing: 'ease-out' });
+    sheet.animate([{ opacity: 0, transform: 'translateY(18px) scale(.97)' }, { opacity: 1, transform: 'none' }], { duration: dur, easing: EASE });
+    sheet.focus({ preventScroll: true });
+    let closing = false;
+    function close() {
+      if (closing) return; closing = true;
+      removeEventListener('keydown', onKey); removeEventListener('popstate', close);
+      const d = reduce ? 0 : 280;
+      back.animate([{ opacity: 1 }, { opacity: 0 }], { duration: d, easing: 'ease-in', fill: 'forwards' });
+      const a = sheet.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(12px) scale(.98)' }], { duration: d, easing: 'ease-in', fill: 'forwards' });
+      const done = () => {
+        box.append(...ov.querySelector('.sheet-body').childNodes);
+        ov.remove();
+        box.style.minHeight = ''; box._sheet = false;
+        checkWide(page);
+        if (box._cover && box._cover.parentNode) box._cover.focus({ preventScroll: true });
+      };
+      a.onfinish = done; if (!d) done();
+    }
+    const onKey = e => { if (e.key === 'Escape') { e.preventDefault(); close(); } };
+    ov.addEventListener('click', e => { if (e.target === ov || e.target === back || e.target.closest('.sheet-x')) close(); });
+    addEventListener('keydown', onKey);
+    addEventListener('popstate', close);
+  }
+  let wideTimer = null;
+  const recheck = () => { clearTimeout(wideTimer); wideTimer = setTimeout(() => checkWide(pages[frontIdx]), 120); };
+  addEventListener('resize', recheck);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(recheck);
 
   // ---------- state ----------
   let cur = Math.max(0, pages.findIndex(p => p.classList.contains('is-front')));

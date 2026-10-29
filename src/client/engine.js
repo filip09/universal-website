@@ -142,39 +142,97 @@
       if (!wide && box._cover) box._cover.remove();
     });
   }
+  // The sheet grows out of the preview itself and folds back into it on close:
+  // it starts exactly over the preview (same place, same size, no padding, no
+  // glass), the content reflows wider as it grows, the fade on the right clears,
+  // the glass fades in. On close the same path runs backwards into the spot on
+  // the page, which has not moved: its scroll position is saved and restored.
+  const OPEN_MS = 640, CLOSE_MS = 520, OPEN_EASE = 'cubic-bezier(.22,.9,.24,1)', CLOSE_EASE = 'cubic-bezier(.5,0,.2,1)';
+  const rectOf = r => ({ left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
   function openWide(box) {
     if (document.querySelector('.lightbox')) return;
     const page = box.closest('.page');
-    const kids = [...box.childNodes].filter(n => n !== box._cover);
-    box.style.minHeight = box.offsetHeight + 'px';
+    const scroller = page && page.querySelector('.scroll');
+    const savedTop = scroller ? scroller.scrollTop : 0;
+    const keep = () => { if (scroller && scroller.scrollTop !== savedTop) scroller.scrollTop = savedTop; };
+    const cover = box._cover;
+    const r0 = box.getBoundingClientRect();
+    const kids = [...box.childNodes].filter(n => n !== cover);
+    box.style.minHeight = r0.height + 'px';
     box._sheet = true;
-    box._cover.remove();
+
     const ov = document.createElement('div');
     ov.className = 'lightbox sheet-ov';
-    ov.innerHTML = `<div class="lb-back"></div><div class="sheet" role="dialog" aria-modal="true" tabindex="-1"><button type="button" class="sheet-x" aria-label="${WIDE_T.close}"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button><div class="sheet-body"></div></div>`;
-    const sheet = ov.querySelector('.sheet'), back = ov.querySelector('.lb-back');
+    ov.innerHTML = `<div class="lb-back"></div><div class="sheet" role="dialog" aria-modal="true" tabindex="-1"><div class="sheet-glass" aria-hidden="true"></div><button type="button" class="sheet-x" aria-label="${WIDE_T.close}"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button><div class="sheet-body"></div></div>`;
+    const sheet = ov.querySelector('.sheet'), back = ov.querySelector('.lb-back'), glass = ov.querySelector('.sheet-glass');
+    const bodyEl = ov.querySelector('.sheet-body'), x = ov.querySelector('.sheet-x');
     if (page) sheet.setAttribute('style', page.getAttribute('style') || '');
-    ov.querySelector('.sheet-body').append(...kids);
+    bodyEl.append(...kids);
+    // lay the sheet out at its final size first, invisibly, to know where it lands
+    sheet.style.visibility = 'hidden';
     document.body.appendChild(ov);
-    const dur = reduce ? 0 : 420;
-    back.animate([{ opacity: 0 }, { opacity: 1 }], { duration: dur, easing: 'ease-out' });
-    sheet.animate([{ opacity: 0, transform: 'translateY(18px) scale(.97)' }, { opacity: 1, transform: 'none' }], { duration: dur, easing: EASE });
+    const r1 = sheet.getBoundingClientRect();
+    const cs1 = getComputedStyle(sheet);
+    const look1 = { padding: cs1.padding, borderRadius: cs1.borderRadius, backgroundColor: cs1.backgroundColor, borderColor: cs1.borderTopColor, boxShadow: cs1.boxShadow, backdropFilter: cs1.backdropFilter || 'none' };
+    const look0 = { padding: '0px', borderRadius: '12px', backgroundColor: 'rgba(0,0,0,0)', borderColor: 'rgba(255,255,255,0)', boxShadow: look1.boxShadow.replace(/rgba?\([^)]*\)/g, 'rgba(0,0,0,0)'), backdropFilter: look1.backdropFilter === 'none' ? 'none' : 'blur(0px) saturate(1)' };
+    sheet.style.visibility = '';
+    keep();
+
+    let anims = [];
+    const run = (el, frames, o) => { const a = el.animate(frames, o); anims.push(a); return a; };
+    const settle = () => { anims.forEach(a => a.cancel()); anims = []; sheet.classList.remove('is-anim'); Object.assign(sheet.style, { position: '', left: '', top: '', width: '', height: '', padding: '' }); };
+
+    if (reduce) {
+      back.style.opacity = 1;
+    } else {
+      sheet.classList.add('is-anim');
+      Object.assign(sheet.style, { position: 'fixed', margin: '0' });
+      const o = { duration: OPEN_MS, easing: OPEN_EASE, fill: 'forwards' };
+      run(sheet, [{ ...rectOf(r0), ...look0 }, { ...rectOf(r1), ...look1 }], o);
+      run(glass, [{ opacity: 0 }, { opacity: 1 }], { ...o, easing: 'ease-out' });
+      run(bodyEl, [{ '--reveal': '0px' }, { '--reveal': '160px' }], o);
+      run(back, [{ opacity: 0 }, { opacity: 1 }], { duration: OPEN_MS * .8, easing: 'ease-out', fill: 'forwards' });
+      run(x, [{ opacity: 0, transform: 'scale(.6)' }, { opacity: 0, transform: 'scale(.6)', offset: .55 }, { opacity: 1, transform: 'none' }], o);
+      if (cover) run(cover, [{ opacity: 1 }, { opacity: 0 }], { duration: 160, easing: 'ease-out', fill: 'forwards' });
+      anims[0].onfinish = () => { settle(); sheet.style.margin = ''; if (cover) cover.remove(); };
+    }
+    if (reduce && cover) cover.remove();
     sheet.focus({ preventScroll: true });
+    keep(); requestAnimationFrame(keep);
+
     let closing = false;
     function close() {
       if (closing) return; closing = true;
       removeEventListener('keydown', onKey); removeEventListener('popstate', close);
-      const d = reduce ? 0 : 280;
-      back.animate([{ opacity: 1 }, { opacity: 0 }], { duration: d, easing: 'ease-in', fill: 'forwards' });
-      const a = sheet.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(12px) scale(.98)' }], { duration: d, easing: 'ease-in', fill: 'forwards' });
+      keep();
       const done = () => {
-        box.append(...ov.querySelector('.sheet-body').childNodes);
+        box.append(...bodyEl.childNodes);
         ov.remove();
         box.style.minHeight = ''; box._sheet = false;
         checkWide(page);
-        if (box._cover && box._cover.parentNode) box._cover.focus({ preventScroll: true });
+        if (box._cover) { box._cover.style.opacity = ''; box._cover.focus({ preventScroll: true }); }
+        keep(); requestAnimationFrame(keep);
       };
-      a.onfinish = done; if (!d) done();
+      if (reduce) { done(); return; }
+      // freeze where it is now (also mid-opening), then fold back into the page
+      const rNow = sheet.getBoundingClientRect();
+      const csNow = getComputedStyle(sheet);
+      const lookNow = { padding: csNow.padding, borderRadius: csNow.borderRadius, backgroundColor: csNow.backgroundColor, borderColor: csNow.borderTopColor, boxShadow: csNow.boxShadow, backdropFilter: csNow.backdropFilter || 'none' };
+      const glassNow = getComputedStyle(glass).opacity, backNow = getComputedStyle(back).opacity;
+      const revealNow = getComputedStyle(bodyEl).getPropertyValue('--reveal') || '160px';
+      sheet.scrollTop = 0;
+      settle();
+      sheet.classList.add('is-anim');
+      Object.assign(sheet.style, { position: 'fixed', margin: '0' });
+      const rBox = box.getBoundingClientRect();
+      const target = { left: rBox.left, top: rBox.top, width: rBox.width, height: rBox.height };
+      const o = { duration: CLOSE_MS, easing: CLOSE_EASE, fill: 'forwards' };
+      const a = run(sheet, [{ ...rectOf(rNow), ...lookNow }, { ...rectOf(target), ...look0 }], o);
+      run(glass, [{ opacity: glassNow }, { opacity: 0 }], { ...o, easing: 'ease-in' });
+      run(bodyEl, [{ '--reveal': revealNow }, { '--reveal': '0px' }], o);
+      run(back, [{ opacity: backNow }, { opacity: 0 }], { ...o, easing: 'ease-in' });
+      run(x, [{ opacity: 1 }, { opacity: 0, offset: .3 }, { opacity: 0 }], o);
+      a.onfinish = done;
     }
     const onKey = e => { if (e.key === 'Escape') { e.preventDefault(); close(); } };
     ov.addEventListener('click', e => { if (e.target === ov || e.target === back || e.target.closest('.sheet-x')) close(); });

@@ -190,7 +190,7 @@
       const o = { duration: OPEN_MS, easing: OPEN_EASE, fill: 'forwards' };
       run(sheet, [{ ...rectOf(r0), ...look0 }, { ...rectOf(r1), ...look1 }], o);
       run(glass, [{ opacity: 0 }, { opacity: 1 }], { ...o, easing: 'ease-out' });
-      run(bodyEl, [{ '--reveal': '0px' }, { '--reveal': '160px' }], o);
+      run(bodyEl, [{ filter: 'blur(6px) saturate(.9)', opacity: .55 }, { filter: 'blur(0px) saturate(1)', opacity: 1 }], { ...o, duration: OPEN_MS * .85 });
       run(back, [{ opacity: 0 }, { opacity: 1 }], { duration: OPEN_MS * .8, easing: 'ease-out', fill: 'forwards' });
       run(x, [{ opacity: 0, transform: 'scale(.6)' }, { opacity: 0, transform: 'scale(.6)', offset: .55 }, { opacity: 1, transform: 'none' }], o);
       if (cover) run(cover, [{ opacity: 1 }, { opacity: 0 }], { duration: 160, easing: 'ease-out', fill: 'forwards' });
@@ -219,7 +219,8 @@
       const csNow = getComputedStyle(sheet);
       const lookNow = { padding: csNow.padding, borderRadius: csNow.borderRadius, backgroundColor: csNow.backgroundColor, borderColor: csNow.borderTopColor, boxShadow: csNow.boxShadow, backdropFilter: csNow.backdropFilter || 'none' };
       const glassNow = getComputedStyle(glass).opacity, backNow = getComputedStyle(back).opacity;
-      const revealNow = getComputedStyle(bodyEl).getPropertyValue('--reveal') || '160px';
+      const bodyNow = getComputedStyle(bodyEl);
+      const focusNow = { filter: bodyNow.filter === 'none' ? 'blur(0px) saturate(1)' : bodyNow.filter, opacity: bodyNow.opacity };
       sheet.scrollTop = 0;
       settle();
       sheet.classList.add('is-anim');
@@ -229,7 +230,7 @@
       const o = { duration: CLOSE_MS, easing: CLOSE_EASE, fill: 'forwards' };
       const a = run(sheet, [{ ...rectOf(rNow), ...lookNow }, { ...rectOf(target), ...look0 }], o);
       run(glass, [{ opacity: glassNow }, { opacity: 0 }], { ...o, easing: 'ease-in' });
-      run(bodyEl, [{ '--reveal': revealNow }, { '--reveal': '0px' }], o);
+      run(bodyEl, [focusNow, { filter: 'blur(6px) saturate(.9)', opacity: .55 }], o);
       run(back, [{ opacity: backNow }, { opacity: 0 }], { ...o, easing: 'ease-in' });
       run(x, [{ opacity: 1 }, { opacity: 0, offset: .3 }, { opacity: 0 }], o);
       a.onfinish = done;

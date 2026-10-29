@@ -129,7 +129,7 @@
     if (!p) return;
     p.querySelectorAll('.embed').forEach(box => {
       if (box._sheet || box.querySelector(':scope > template')) return;
-      const wide = wideMQ.matches && (box.classList.remove('is-wide'), overflows(box));
+      const wide = wideMQ.matches && overflows(box);
       box.classList.toggle('is-wide', wide);
       if (wide && !box._cover) {
         const b = document.createElement('button');

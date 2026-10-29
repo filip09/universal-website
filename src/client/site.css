@@ -117,9 +117,9 @@ figcaption{font-size:.85em;color:var(--muted);margin-top:8px}
 .video-frame:hover .play{transform:scale(1.08)}
 .embed{min-width:0}
 /* wide content on a computer: preview fading out to the right + sheet above the book */
-.embed.is-wide{position:relative;overflow:hidden;border-radius:14px;isolation:isolate}
+.embed.is-wide{position:relative;overflow:hidden;border-radius:14px;isolation:isolate;max-height:340px}
 /* the preview sits under frosted glass: you see that there is a table, not its words */
-.embed.is-wide > :not(.wide-cover){filter:blur(6px) saturate(.9);opacity:.55;pointer-events:none;user-select:none}
+.embed.is-wide > :not(.wide-cover){filter:blur(6px) saturate(.9);opacity:.55;pointer-events:none;user-select:none;-webkit-mask-image:linear-gradient(#000 55%,transparent);mask-image:linear-gradient(#000 55%,transparent)}
 .embed.is-wide *{scrollbar-width:none}
 .embed.is-wide *::-webkit-scrollbar{display:none}
 .wide-cover{all:unset;position:absolute;inset:0;cursor:zoom-in;display:flex;align-items:center;justify-content:center;border-radius:14px;

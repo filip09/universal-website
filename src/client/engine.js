@@ -284,7 +284,7 @@
     const sec = p.querySelector('#s-' + sid);
     if (!sec) return 0;
     const stick = parseFloat(getComputedStyle(nav).top) || 0;
-    const gap = stick + nav.offsetHeight + 18;
+    const gap = stick + nav.offsetHeight + 30; // clear of the soft veil below the glass band
     if (!phone.matches) { const sc = p.querySelector('.scroll'); return Math.max(0, sec.offsetTop - gap - (parseFloat(getComputedStyle(sc).paddingTop) || 0)); }
     return Math.max(0, window.scrollY + sec.getBoundingClientRect().top - gap);
   }
@@ -335,10 +335,11 @@
     if (!navEl) return;
     const stuck = isStuck(navEl);
     navEl.classList.toggle('is-stuck', stuck);
-    const line = navEl.getBoundingClientRect().bottom + 28;
+    // a section is being read once the page is scrolled to (or past) the spot
+    // a click in the menu would bring it to; before the first one, it is the main page
+    const sc0 = scrollerOf(p), y = sc0 ? sc0.scrollTop : window.scrollY;
     let sid = '';
-    // until the menu sticks, the reader is still on the main page itself
-    if (stuck) p.querySelectorAll('.sub').forEach(sec => { if (sec.getBoundingClientRect().top <= line) sid = sec.dataset.sub; });
+    p.querySelectorAll('.sub').forEach(sec => { if (subTarget(p, sec.dataset.sub) <= y + 6) sid = sec.dataset.sub; });
     // reaching the very end counts as the last section, even if it is short
     const sc = scrollerOf(p);
     const atEnd = sc ? sc.scrollTop + sc.clientHeight >= sc.scrollHeight - 2 : window.scrollY + innerHeight >= document.documentElement.scrollHeight - 2;

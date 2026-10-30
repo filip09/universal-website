@@ -284,7 +284,7 @@
     const sec = p.querySelector('#s-' + sid);
     if (!sec) return 0;
     const stick = parseFloat(getComputedStyle(nav).top) || 0;
-    const gap = stick + nav.offsetHeight + 30; // clear of the soft veil below the glass band
+    const gap = stick + nav.offsetHeight + 46; // the text has come back from the fade by here
     if (!phone.matches) { const sc = p.querySelector('.scroll'); return Math.max(0, sec.offsetTop - gap - (parseFloat(getComputedStyle(sc).paddingTop) || 0)); }
     return Math.max(0, window.scrollY + sec.getBoundingClientRect().top - gap);
   }
@@ -311,15 +311,15 @@
       else { goal = null; queueSpy(); }
     }, behavior === 'smooth' ? 850 : 120);
   }
-  function setSub(j, sid, { history: h = false } = {}) {
+  function setSub(j, sid, { history: h = false, force = false } = {}) {
     const p = pages[j];
-    p.querySelectorAll('.subnav-a').forEach(a => {
+    [...p.querySelectorAll('.subnav-a'), ...(subbarFor === j ? subbar.querySelectorAll('.subnav-a') : [])].forEach(a => {
       const on = a.dataset.sub === sid;
       a.classList.toggle('is-active', on);
       if (on) { a.setAttribute('aria-current', 'location'); const row = a.parentElement; if (row.scrollWidth > row.clientWidth) row.scrollTo({ left: a.offsetLeft - 24, behavior: reduce ? 'instant' : 'smooth' }); }
       else a.removeAttribute('aria-current');
     });
-    if (sid === curSub && !h) return;
+    if (sid === curSub && !h || force) return;
     curSub = sid;
     const pg = cfg.pages[j], s = subOf(j, sid);
     document.title = s ? `${s.title} · ${pg.title} · ${cfg.siteName}` : pg.id === cfg.home ? cfg.siteName : `${pg.title} · ${cfg.siteName}`;
@@ -331,10 +331,11 @@
   function spy() {
     spyQueued = false;
     if (nav || frontIdx < 0) return;
-    const p = pages[frontIdx], navEl = p.querySelector('.subnav');
-    if (!navEl) return;
+    const p = pages[frontIdx], navEl = p.querySelector('.subnav:not(.subnav-float)');
+    if (!navEl) { body.classList.remove('has-subbar'); return; }
     const stuck = isStuck(navEl);
     navEl.classList.toggle('is-stuck', stuck);
+    if (stuck !== p.classList.contains('is-stuck') || (phone.matches && stuck !== body.classList.contains('has-subbar'))) showStuck(frontIdx, stuck);
     // a section is being read once the page is scrolled to (or past) the spot
     // a click in the menu would bring it to; before the first one, it is the main page
     const sc0 = scrollerOf(p), y = sc0 ? sc0.scrollTop : window.scrollY;
@@ -354,6 +355,36 @@
     p.querySelector('.scroll').addEventListener('scroll', queueSpy, { passive: true });
     // absolute links: the address changes while reading, relative ones would break
     p.querySelectorAll('.subnav-a').forEach(a => { a.href = a.dataset.sub ? subUrlOf(j, a.dataset.sub) : urlOf(p.dataset.id); });
+  });
+  // the floating copy of each menu (computer) and the phone's bar under the tabs
+  const subbar = document.createElement('div');
+  subbar.className = 'subbar'; subbar.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(subbar);
+  pages.forEach(p => {
+    const nav = p.querySelector('.subnav');
+    if (!nav) return;
+    p.classList.add('has-subnav');
+    const fl = nav.cloneNode(true);
+    fl.classList.add('subnav-float'); fl.setAttribute('aria-hidden', 'true');
+    fl.querySelectorAll('a').forEach(a => a.tabIndex = -1);
+    p.appendChild(fl);
+  });
+  let subbarFor = -1;
+  function showStuck(j, stuck) {
+    const p = pages[j];
+    p.classList.toggle('is-stuck', stuck);
+    const fl = p.querySelector('.subnav-float');
+    if (fl && stuck) p.style.setProperty('--float-h', fl.offsetHeight ? fl.offsetHeight + 'px' : '64px');
+    if (phone.matches) {
+      if (stuck && subbarFor !== j) { subbar.replaceChildren(p.querySelector('.subnav-in').cloneNode(true)); subbar.setAttribute('style', p.getAttribute('style') || ''); subbarFor = j; setSub(j, curSub, { force: true }); }
+      body.classList.toggle('has-subbar', stuck);
+    }
+  }
+  subbar.addEventListener('click', e => {
+    const a = e.target.closest('a.subnav-a');
+    if (!a || e.metaKey || e.ctrlKey) return;
+    e.preventDefault();
+    goSub(frontIdx, a.dataset.sub);
   });
   function isStuck(navEl) {
     const sc = scrollerOf(navEl.closest('.page'));

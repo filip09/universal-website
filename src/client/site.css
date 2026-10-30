@@ -117,19 +117,23 @@ figcaption{font-size:.85em;color:var(--muted);margin-top:8px}
 .video-frame:hover .play{transform:scale(1.08)}
 .embed{min-width:0}
 /* subpages: sections of the main page's sheet, with one menu that sticks to the top.
-   Stuck, the menu floats on a band of frosted glass across the whole sheet: what
-   scrolls beneath is blurred, and the band fades out softly at the bottom. */
-.subnav{position:sticky;top:-56px;z-index:3;margin:26px calc(50% - 50cqw) -6px!important;padding:12px calc(50cqw - 50%) 10px;
-  transition:background .4s ease}
-/* stuck: the menu sits on a band of dense glass in the sheet's own tone, so the text
-   scrolling beneath goes quiet; a soft veil below lets it come back gradually. The
-   blur on top refines it where the browser can draw it inside the 3D stack. */
-.subnav.is-stuck{
-  background:linear-gradient(120deg, hsla(var(--h),var(--sat),70%,.07), transparent 60%),linear-gradient(to bottom, rgba(var(--glass-rgb),.97), rgba(var(--glass-rgb),.93));
-  -webkit-backdrop-filter:blur(22px) saturate(1.6);backdrop-filter:blur(22px) saturate(1.6)}
-.subnav::after{content:"";position:absolute;left:0;right:0;top:100%;height:30px;pointer-events:none;opacity:0;transition:opacity .4s ease;
-  background:linear-gradient(to bottom, rgba(var(--glass-rgb),.93), rgba(var(--glass-rgb),.55) 40%, rgba(var(--glass-rgb),.16) 75%, rgba(var(--glass-rgb),0))}
-.subnav.is-stuck::after{opacity:1}
+   Stuck, a copy of the menu floats at the top of the sheet and the text dissolves into
+   the sheet's own glass as it nears it: no band, no line, no darker strip. On phones
+   the copy joins the tab bar, which is real frosted glass. */
+@property --fade-at{syntax:'<length>';inherits:false;initial-value:0px}
+@property --fade-len{syntax:'<length>';inherits:false;initial-value:0px}
+.subnav{position:sticky;top:-56px;z-index:3;margin:26px 0 4px!important;padding-top:12px}
+.page.is-stuck .subnav:not(.subnav-float){visibility:hidden}
+.page.has-subnav .scroll{
+  -webkit-mask-image:linear-gradient(to bottom, transparent var(--fade-at), #000 calc(var(--fade-at) + var(--fade-len)));
+  mask-image:linear-gradient(to bottom, transparent var(--fade-at), #000 calc(var(--fade-at) + var(--fade-len)));
+  transition:--fade-at .35s ease,--fade-len .35s ease}
+.page.is-stuck .scroll{--fade-at:var(--float-h,64px);--fade-len:64px}
+.subnav-float{position:absolute;z-index:4;top:0;left:0;right:0;margin:0!important;padding:12px max(28px, calc((100% - 660px) / 2)) 0;
+  pointer-events:none;opacity:0;transform:translateY(-6px);transition:opacity .3s ease,transform .35s cubic-bezier(.2,.8,.2,1)}
+.subnav-float .subnav-in{pointer-events:auto}
+.page.is-stuck .subnav-float{opacity:1;transform:none}
+.subbar{display:none}
 .subnav-in{position:relative;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding:5px;border-radius:16px;
   background:linear-gradient(to bottom, rgba(255,255,255,.075), rgba(255,255,255,.025));
   border:1px solid rgba(255,255,255,.12);
@@ -287,6 +291,15 @@ figcaption{font-size:.85em;color:var(--muted);margin-top:8px}
   .stack{position:relative;left:auto;top:auto;bottom:auto;margin:calc(var(--mh,52px) + 4px) auto calc(env(safe-area-inset-bottom,0px) + 84px);transform-origin:50% 45vh}
   .page{inset:0 0 auto 0;max-height:100lvh;overflow:clip}
   .subnav{top:calc(var(--mh,52px) - 7px);padding-top:8px}
+  .page.has-subnav .scroll{-webkit-mask-image:none;mask-image:none}
+  .subnav-float{display:none}
+  /* phones: the menu joins the frosted tab bar */
+  .subbar{display:block;position:fixed;z-index:4;left:0;right:0;top:calc(var(--mh,52px) - 7px);padding:6px max(10px, env(safe-area-inset-right,0px)) 22px max(10px, env(safe-area-inset-left,0px));
+    background:linear-gradient(to bottom, rgba(8,8,14,.5), rgba(8,8,14,.34) 55%, rgba(8,8,14,0));
+    -webkit-backdrop-filter:blur(16px) saturate(1.25);backdrop-filter:blur(16px) saturate(1.25);
+    opacity:0;visibility:hidden;transform:translateY(-6px);transition:opacity .3s ease,transform .35s cubic-bezier(.2,.8,.2,1),visibility 0s .35s}
+  body.has-subbar .subbar{opacity:1;visibility:visible;transform:none;transition:opacity .3s ease,transform .35s cubic-bezier(.2,.8,.2,1)}
+  body.has-subbar .marks{background:rgba(8,8,14,.5)!important}
   .subnav-a{padding:9px 12px}
   .page.is-front{position:relative;max-height:none}
   .scroll{position:static;overflow:visible}

@@ -317,19 +317,39 @@ ${field('message', t.message, `<textarea id="${id('message')}" name="message" re
   const colorStyle = i => { const c = prof.pages[i]; return `--h:${c.h};--sat:${c.s}%;--ts:${c.ts}%;--tl:${c.tl}%;--gs:${c.gs ?? 85}%`; };
   // In another language, internal links written as /<id>/ (either the main-language
   // id or this language's id) lead to this language's version of that page.
-  const slugOf = new Map();
-  for (const p of model.pages) { slugOf.set(p.base || p.id, p.id); slugOf.set(p.id, p.id); }
-  const localize = html => !prefix ? html : html.replace(/href="\/([a-z0-9-]*)\/?(#[^"]*)?"/g, (m, id, hash = '') => {
+  // Subpages live under their main page: /<main>/<sub>/ (on the home page: /<sub>/).
+  // A link written as /<sub>/ (main-language or this language's id) leads there too.
+  const pageUrl = p => (p.id === model.site.home ? '' : `${p.id}/`);
+  const subUrl = (p, s) => `${pageUrl(p)}${s.id}/`;
+  const slugOf = new Map(), subPath = new Map();
+  for (const p of model.pages) {
+    slugOf.set(p.base || p.id, p.id); slugOf.set(p.id, p.id);
+    for (const s of p.subs || []) { subPath.set(s.base || s.id, subUrl(p, s)); subPath.set(s.id, subUrl(p, s)); }
+  }
+  const localize = html => html.replace(/href="\/([a-z0-9-]*)\/?(#[^"]*)?"/g, (m, id, hash = '') => {
+    if (subPath.has(id)) return `href="/${prefix}${subPath.get(id)}${hash}"`;
+    if (!prefix) return m;
     if (id === '') return `href="/${prefix}${hash}"`;
     if (!slugOf.has(id)) return m;
     const s = slugOf.get(id);
     return `href="/${prefix}${s === model.site.home ? '' : s + '/'}${hash}"`;
   });
-  if (prefix) footLine = localize(footLine);
+  footLine = localize(footLine);
+  const SUBNAV_LABEL = lang === 'cs' ? 'Obsah stránky' : 'On this page';
   setFoot();
   const articles = [];
   for (const [i, p] of model.pages.entries()) {
-    const body = localize(await renderContent(p.content, `pages › ${p.id}`));
+    let body = localize(await renderContent(p.content, `pages › ${p.id}`));
+    if (p.subs && p.subs.length) {
+      // one menu after the main page's own content; it sticks to the top of the sheet
+      const links = [`<a class="subnav-a is-top" href="${ROOT}${prefix}${pageUrl(p)}" data-sub="">${esc(p.label)}</a>`]
+        .concat(p.subs.map(s => `<a class="subnav-a" href="${ROOT}${prefix}${subUrl(p, s)}" data-sub="${s.id}">${esc(s.label)}</a>`));
+      body += `\n<nav class="subnav" aria-label="${SUBNAV_LABEL}"><div class="subnav-in">${links.join('')}</div></nav>`;
+      for (const s of p.subs) {
+        const sb = localize(await renderContent(s.content, `pages › ${s.base || s.id}`));
+        body += `\n<section class="sub" id="s-${s.id}" data-sub="${s.id}" aria-labelledby="t-${s.id}"><h2 class="sub-title" id="t-${s.id}">${inline(s.title)}</h2>\n${sb}\n</section>`;
+      }
+    }
     articles.push({
       page: p,
       html: `<article class="page" id="p-${p.id}" data-id="${p.id}" style="${colorStyle(i)}" aria-labelledby="t-${p.id}"><div class="scroll"><div class="inner"><h1 id="t-${p.id}">${inline(p.title)}</h1>\n${body}\n${pageFoot}</div></div></article>`,
@@ -366,7 +386,8 @@ ${field('message', t.message, `<textarea id="${id('message')}" name="message" re
 
   const config = {
     home: model.site.home,
-    pages: model.pages.map((p, i) => ({ id: p.id, hue: prof.pages[i].h, title: p.title, field: prof.pages[i].field, alt: multi ? alts.get(p.base || p.id) : undefined })),
+    pages: model.pages.map((p, i) => ({ id: p.id, hue: prof.pages[i].h, title: p.title, field: prof.pages[i].field, alt: multi ? alts.get(p.base || p.id) : undefined,
+      subs: (p.subs || []).map(s => ({ id: s.id, title: s.title, url: subUrl(p, s), alt: multi ? alts.get(s.base || s.id) : undefined })) })),
     lang,
     profile: prof.kind,
     siteName: model.site.name,
@@ -411,20 +432,21 @@ ${field('message', t.message, `<textarea id="${id('message')}" name="message" re
   // made in the switcher is remembered and wins. Search-engine bots are left alone.
   const langScript = p => !multi ? '' : `<script>(function(){try{var A=${JSON.stringify(Object.fromEntries(Object.entries(altOf(p)).map(([l, to]) => [l, '%%ROOT%%' + to]))).replace(/</g, '\\u003c')},C=${JSON.stringify(lang)},M=${JSON.stringify(langs[0])};if(/bot|crawl|spider|slurp|lighthouse|headless|preview/i.test(navigator.userAgent))return;var s=null;try{s=localStorage.getItem('uw-lang')}catch(e){}if(s){if(s!==C&&A[s])location.replace(A[s]+location.hash);return}if(C!==M)return;var b=(navigator.languages||[navigator.language||'']);for(var i=0;i<b.length;i++){var l=String(b[i]).slice(0,2).toLowerCase();if(l===C)return;if(A[l]){location.replace(A[l]+location.hash);return}}}catch(e){}})();</script>`;
 
-  async function writePage(front, file, root, { is404 = false } = {}) {
+  async function writePage(front, file, root, { is404 = false, sub = null } = {}) {
     const p = front.page;
+    const t = sub || p; // what this file is about: the page, or one of its subpages
     const stack = articles.map(a => {
       let s = a.html;
       if (a === front) s = s.replace('class="page"', 'class="page is-front"').replace(/ data-srcset=/g, ' srcset=').replace(/ data-src=/g, ' src=');
       return s;
     }).join('\n');
-    const title = p.id === model.site.home ? model.site.name : `${p.title} · ${model.site.name}`;
-    const desc = p.description || model.site.description;
-    const share = (await shareUrl(p.shareImage)) || defaultShare;
-    const canonical = model.site.domain && !is404 ? `https://${model.site.domain}/${prefix}${urlOf(p.id)}` : '';
+    const title = sub ? `${sub.title} · ${p.title} · ${model.site.name}` : p.id === model.site.home ? model.site.name : `${p.title} · ${model.site.name}`;
+    const desc = t.description || p.description || model.site.description;
+    const share = (await shareUrl(t.shareImage || p.shareImage)) || defaultShare;
+    const canonical = model.site.domain && !is404 ? `https://${model.site.domain}/${prefix}${sub ? subUrl(p, sub) : urlOf(p.id)}` : '';
     const hreflang = multi && model.site.domain && !is404
-      ? Object.entries(altOf(p)).map(([l, to]) => `<link rel="alternate" hreflang="${l}" href="https://${model.site.domain}/${to}">`).join('')
-        + (altOf(p)[langs[0]] !== undefined ? `<link rel="alternate" hreflang="x-default" href="https://${model.site.domain}/${altOf(p)[langs[0]]}">` : '')
+      ? Object.entries(altOf(t)).map(([l, to]) => `<link rel="alternate" hreflang="${l}" href="https://${model.site.domain}/${to}">`).join('')
+        + (altOf(t)[langs[0]] !== undefined ? `<link rel="alternate" hreflang="x-default" href="https://${model.site.domain}/${altOf(t)[langs[0]]}">` : '')
       : '';
     const head = [
       '<meta charset="utf-8">',
@@ -433,7 +455,7 @@ ${field('message', t.message, `<textarea id="${id('message')}" name="message" re
       desc && `<meta name="description" content="${esc(desc)}">`,
       canonical && `<link rel="canonical" href="${canonical}">`,
       hreflang,
-      !is404 && langScript(p),
+      !is404 && langScript(t),
       `<meta property="og:title" content="${esc(title)}">`,
       desc && `<meta property="og:description" content="${esc(desc)}">`,
       share && `<meta property="og:image" content="${share}"><meta name="twitter:card" content="summary_large_image">`,
@@ -453,7 +475,7 @@ ${field('message', t.message, `<textarea id="${id('message')}" name="message" re
 <head>
 ${head}
 </head>
-<body${bodyCls} data-front="${p.id}" data-root="${ROOT}" data-pages="${ROOT}${prefix}" data-build="${buildId}">
+<body${bodyCls} data-front="${p.id}"${sub ? ` data-sub="${sub.id}"` : ''} data-root="${ROOT}" data-pages="${ROOT}${prefix}" data-build="${buildId}">
 <canvas id="field" aria-hidden="true"></canvas><div class="grain" aria-hidden="true"></div>
 <main class="stage" id="stage"><div class="stack" id="stack">
 ${stack}
@@ -464,15 +486,19 @@ ${footerHtml}
 </html>`;
     const full = path.join(outDir, file);
     await mkdir(path.dirname(full), { recursive: true });
-    await writeFile(full, html.split(LANGS_SLOT).join(langLinks(p)).split(ROOT).join(root));
+    await writeFile(full, html.split(LANGS_SLOT).join(langLinks(t)).split(ROOT).join(root));
   }
 
   const up = '../'.repeat(prefix.split('/').filter(Boolean).length);
   for (const a of articles) {
     const isHome = a.page.id === model.site.home;
     await writePage(a, prefix + (isHome ? 'index.html' : `${a.page.id}/index.html`), up + (isHome ? './' : '../'));
+    for (const s of a.page.subs || []) {
+      const depth = subUrl(a.page, s).split('/').filter(Boolean).length;
+      await writePage(a, prefix + subUrl(a.page, s) + 'index.html', up + '../'.repeat(depth), { sub: s });
+    }
   }
-  const urls = model.pages.map(p => prefix + urlOf(p.id));
+  const urls = model.pages.flatMap(p => [prefix + urlOf(p.id), ...(p.subs || []).map(s => prefix + subUrl(p, s))]);
   if (prefix) return { pages: articles.length, images: pipe.stats, urls };
   const homeArticle = articles.find(a => a.page.id === model.site.home) || articles[0];
   if (homeArticle) await writePage(homeArticle, '404.html', '/', { is404: true });

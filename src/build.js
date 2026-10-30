@@ -21,8 +21,13 @@ export async function buildFromSource({ source, outDir, cacheDir, warnings, form
   // where each page lives in every language: main id -> { lang: path from the root }
   const alts = new Map();
   for (const { lang, prefix, model: m } of models) for (const p of m.pages) {
+    const pu = p.id === m.site.home ? '' : p.id + '/';
     if (!alts.has(p.base)) alts.set(p.base, {});
-    alts.get(p.base)[lang] = prefix + (p.id === m.site.home ? '' : p.id + '/');
+    alts.get(p.base)[lang] = prefix + pu;
+    for (const s of p.subs || []) {
+      if (!alts.has(s.base)) alts.set(s.base, {});
+      alts.get(s.base)[lang] = prefix + pu + s.id + '/';
+    }
   }
   const buildId = Date.now().toString(36);
   let result = null;

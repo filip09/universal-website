@@ -73,9 +73,11 @@ export function buildModel(tabs, warn, { lang = null } = {}) {
   const styles = { ...STYLE_DEFAULTS };
   for (const [k, v] of Object.entries(rawStyles)) if (str(v) !== '') styles[k] = v;
 
-  // pages
+  // pages (main pages and their subpages: parent_page = id of the main page)
   const seen = new Set();
   const pages = [];
+  const allIds = new Map(); // every id in the sheet -> its parent_page (also hidden rows)
+  for (const r of tabs.pages || []) { const id = str(r.id).toLowerCase(); if (id && !allIds.has(id)) allIds.set(id, str(r.parent_page).toLowerCase()); }
   for (const [i, r] of (tabs.pages || []).entries()) {
     const id = str(r.id).toLowerCase();
     if (!id) { if (str(r.content) || str(r.title)) warn(`pages, řádek ${i + 2}: chybí id stránky, řádek je přeskočen.`); continue; }
@@ -90,10 +92,11 @@ export function buildModel(tabs, warn, { lang = null } = {}) {
       if (!/^[a-z0-9][a-z0-9-]*$/.test(slug)) warn(`pages: id${sfx} „${slug}“ má obsahovat jen malá písmena bez diakritiky, číslice a pomlčky.`);
       slug = slug.replace(/[^a-z0-9-]/g, '-');
     }
-    if (tr && str(r.content) !== '' && str(r['content' + sfx]) === '') warn(`pages › ${base}: chybí překlad (content${sfx}), v jazyce ${lang} se zobrazí původní obsah.`);
     pages.push({
       id: slug,
       base,
+      parent: str(r.parent_page).toLowerCase(),
+      untranslated: tr && str(r.content) !== '' && str(r['content' + sfx]) === '',
       order: num(r.order, 1000 + i),
       label: str(t(r, 'tab_label')) || str(t(r, 'title')) || slug,
       title: str(t(r, 'title')) || str(t(r, 'tab_label')) || slug,
@@ -104,6 +107,20 @@ export function buildModel(tabs, warn, { lang = null } = {}) {
     });
   }
   pages.sort((a, b) => a.order - b.order);
+  // attach subpages to their main page; only one level
+  const mains = pages.filter(p => !p.parent);
+  for (const s of pages.filter(p => p.parent)) {
+    const m = mains.find(p => p.base === s.parent);
+    if (m) { (m.subs ||= []).push(s); continue; }
+    if (tr) continue; // structure problems are reported once, in the main language
+    if (!allIds.has(s.parent)) warn(`pages › ${s.base}: parent_page „${s.parent}“ neodpovídá žádné stránce, podstránka se nezobrazí.`);
+    else if (allIds.get(s.parent)) warn(`pages › ${s.base}: parent_page „${s.parent}“ je sama podstránka. Podstránky mohou být jen o jednu úroveň, tahle se nezobrazí.`);
+    // a hidden main page hides its subpages without a warning
+  }
+  pages.length = 0;
+  pages.push(...mains);
+  for (const m of pages) m.subs ||= [];
+  for (const p of pages.flatMap(m => [m, ...m.subs])) if (p.untranslated) warn(`pages › ${p.base}: chybí překlad (content${sfx}), v jazyce ${lang} se zobrazí původní obsah.`);
   if (!pages.length) warn('pages: není tu žádná viditelná stránka.');
   if (tr) {
     const slugs = new Set();
@@ -147,7 +164,8 @@ export function buildModel(tabs, warn, { lang = null } = {}) {
   const homeBase = str(site.home_page).toLowerCase();
   let homePage = pages.find(p => p.base === homeBase);
   if (pages.length && !homePage) {
-    if (homeBase && !tr) warn(`site: home_page „${homeBase}“ neodpovídá žádné viditelné stránce, použije se „${pages[0].id}“.`);
+    if (homeBase && !tr && allIds.get(homeBase)) warn(`site: home_page „${homeBase}“ je podstránka, úvodní stránkou může být jen hlavní stránka. Použije se „${pages[0].id}“.`);
+    else if (homeBase && !tr) warn(`site: home_page „${homeBase}“ neodpovídá žádné viditelné stránce, použije se „${pages[0].id}“.`);
     homePage = pages[0];
   }
   const home = homePage ? homePage.id : '';

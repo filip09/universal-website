@@ -86,3 +86,25 @@ test('languages: _en columns, id_en, fallback with warning', () => {
   assert.equal(en.pages[1].content, 'text: Levně');
   assert.ok(w.some(m => m.includes('content_en')));
 });
+
+test('subpages: parent_page, order within parent, one level, warnings', () => {
+  const tabs = {
+    site: [{ setting: 'home_page', value: 'uvod' }],
+    pages: [
+      { id: 'uvod', order: 10, title: 'Úvod', content: 'text: a' },
+      { id: 'sluzby', order: 20, title: 'Služby', content: 'text: b' },
+      { id: 'masaze', order: 20, title: 'Masáže', parent_page: 'sluzby', content: 'text: c' },
+      { id: 'cviceni', order: 10, title: 'Cvičení', parent_page: 'sluzby', content: 'text: d' },
+      { id: 'vnuk', title: 'X', parent_page: 'masaze', content: 'text: e' },
+      { id: 'sirotek', title: 'Y', parent_page: 'nic', content: 'text: f' },
+      { id: 'skryta', title: 'Z', visible: 'no', content: 'text: g' },
+      { id: 'pod-skrytou', title: 'W', parent_page: 'skryta', content: 'text: h' },
+    ],
+  };
+  const w = [];
+  const m = buildModel(tabs, x => w.push(x));
+  assert.deepEqual(m.pages.map(p => p.id), ['uvod', 'sluzby']);
+  assert.deepEqual(m.pages[1].subs.map(s => s.id), ['cviceni', 'masaze']);
+  assert.equal(w.length, 2);
+  assert.ok(w.some(x => x.includes('vnuk')) && w.some(x => x.includes('sirotek')));
+});

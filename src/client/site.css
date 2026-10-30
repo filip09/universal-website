@@ -116,6 +116,29 @@ figcaption{font-size:.85em;color:var(--muted);margin-top:8px}
 .play::before{content:"";border-left:17px solid #fff;border-top:11px solid transparent;border-bottom:11px solid transparent;margin-left:5px}
 .video-frame:hover .play{transform:scale(1.08)}
 .embed{min-width:0}
+/* subpages: sections of the main page's sheet, with one menu that sticks to the top */
+.subnav{position:sticky;top:-48px;z-index:3;margin:26px 0 4px!important}
+.subnav-in{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding:5px;border-radius:14px;
+  background:rgba(var(--glass-rgb),.55);border:1px solid rgba(255,255,255,.1);
+  -webkit-backdrop-filter:blur(16px) saturate(1.25);backdrop-filter:blur(16px) saturate(1.25);transition:background .3s,box-shadow .3s}
+.subnav-in::-webkit-scrollbar{display:none}
+.subnav.is-stuck .subnav-in{background:rgba(var(--glass-rgb),.82);box-shadow:0 14px 34px -18px rgba(0,0,0,.8),0 0 0 1px hsla(var(--h),var(--sat),70%,.08) inset}
+.subnav-a{flex:0 0 auto;padding:9px 14px;border-radius:10px;font:600 14px/1.2 var(--f-body);white-space:nowrap;text-decoration:none;
+  color:color-mix(in srgb, var(--text) 72%, var(--muted));transition:color .25s,background .25s}
+.subnav-a:hover{color:var(--text);background:rgba(255,255,255,.07)}
+.subnav-a.is-top{position:relative;margin-right:9px;font-family:var(--f-display);font-weight:400;font-size:15px}
+.subnav-a.is-top::after{content:"";position:absolute;right:-7px;top:9px;bottom:9px;width:1px;background:rgba(255,255,255,.14)}
+.subnav-a.is-active{color:#0b0b12;background:hsl(var(--h),var(--sat),78%)}
+.subnav-a.is-top.is-active{color:var(--text);background:rgba(255,255,255,.1)}
+.subnav-a:focus-visible{outline:2px solid hsl(var(--h),var(--sat),75%);outline-offset:1px}
+.profile-tron .subnav-a.is-active{background:var(--neon);color:#020608}
+.sub{display:flex;flex-direction:column;gap:22px;padding-top:34px;border-top:1px solid var(--faint)}
+.subnav + .sub{border-top:0;padding-top:12px}
+.sub > *{margin:0;min-width:0}
+.sub-title{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,4.4vw,44px);line-height:1.08;letter-spacing:-.005em;text-wrap:balance;margin:0}
+.sub > h2:not(.sub-title){margin-top:34px}
+.sub > h3{margin-top:10px}
+.sub > .sub-title + h2,.sub > h2 + h3{margin-top:0}
 /* wide content on a computer: preview fading out to the right + sheet above the book */
 .embed.is-wide{position:relative;overflow:hidden;border-radius:14px;isolation:isolate;max-height:340px}
 /* the preview sits under frosted glass: you see that there is a table, not its words */
@@ -240,11 +263,15 @@ figcaption{font-size:.85em;color:var(--muted);margin-top:8px}
    and its background under its translucent status bar and toolbar, edge to edge. */
 @media (max-width:760px){
   :root{--pw:calc(100vw - 16px)}
-  html,body{height:auto;overflow-x:hidden;overflow-y:visible}
+  html,body{height:auto;overflow-x:hidden;overflow-x:clip;overflow-y:visible}
   body{min-height:100lvh}
   .stage{position:relative;inset:auto;min-height:100lvh;perspective-origin:50% 45vh}
   .stack{position:relative;left:auto;top:auto;bottom:auto;margin:calc(var(--mh,52px) + 4px) auto calc(env(safe-area-inset-bottom,0px) + 84px);transform-origin:50% 45vh}
-  .page{inset:0 0 auto 0;max-height:100lvh}
+  .page{inset:0 0 auto 0;max-height:100lvh;overflow:clip}
+  .subnav{top:calc(var(--mh,52px) - 7px);margin-inline:-20px!important}
+  .subnav-in{border-radius:0;border-inline:0;padding:6px 14px;background:rgba(var(--glass-rgb),.7)}
+  .subnav.is-stuck .subnav-in{background:rgba(var(--glass-rgb),.94);box-shadow:0 12px 24px -14px rgba(0,0,0,.85)}
+  .subnav-a{padding:9px 12px}
   .page.is-front{position:relative;max-height:none}
   .scroll{position:static;overflow:visible}
   .marks,.tabs-left .marks{background:linear-gradient(to bottom, rgba(8,8,14,.55), rgba(8,8,14,.28) 75%, rgba(8,8,14,0));

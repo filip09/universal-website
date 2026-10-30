@@ -26,11 +26,21 @@
 
   // ---------- urls ----------
   const urlOf = id => new URL(id === cfg.home ? '' : id + '/', proot).href;
-  function idFromLocation() {
-    const rel = decodeURIComponent(location.pathname.slice(proot.pathname.length)).replace(/\/(index\.html)?$/, '');
-    if (!rel) return cfg.home;
-    return idx(rel) >= 0 ? rel : null;
+  function idFromLocation() { return routeOf(location.pathname).id; }
+  // path -> { id: page id, sub: subpage id or '' } ; null id when the path is not ours
+  const subRoutes = new Map();
+  cfg.pages.forEach(p => (p.subs || []).forEach(s => {
+    subRoutes.set(s.url.replace(/\/$/, ''), { id: p.id, sub: s.id });
+    subRoutes.set(s.id, { id: p.id, sub: s.id });
+  }));
+  function routeOf(pathname) {
+    const rel = decodeURIComponent(pathname.slice(proot.pathname.length)).replace(/\/(index\.html)?$/, '');
+    if (!rel) return { id: cfg.home, sub: '' };
+    if (subRoutes.has(rel)) return subRoutes.get(rel);
+    return { id: idx(rel) >= 0 ? rel : null, sub: '' };
   }
+  const subOf = (i, sid) => ((cfg.pages[i] && cfg.pages[i].subs) || []).find(s => s.id === sid) || null;
+  const subUrlOf = (i, sid) => { const s = subOf(i, sid); return s ? new URL(s.url, proot).href : urlOf(cfg.pages[i].id); };
 
   // ---------- lazy media ----------
   // Relative media paths are resolved against the root captured at load, because
@@ -256,7 +266,105 @@
   function setMark(j) { marks.forEach((m, i) => i === j ? m.setAttribute('aria-current', 'page') : m.removeAttribute('aria-current')); }
 
   function pushUrl(j) {
-    try { history.pushState({ id: pages[j].dataset.id }, '', urlOf(pages[j].dataset.id)); } catch (e) {}
+    const sub = pendingSub && pendingSub.j === j ? pendingSub.sub : '';
+    try { history.pushState({ id: pages[j].dataset.id, sub }, '', sub ? subUrlOf(j, sub) : urlOf(pages[j].dataset.id)); } catch (e) {}
+  }
+
+  // ---------- subpages ----------
+  // Subpages are sections of their main page's sheet. One menu after the main
+  // content sticks to the top of the sheet; it highlights the section being read
+  // and the address follows quietly, so every subpage has its own link.
+  let pendingSub = null;           // { j, sub } to scroll to once a turn has finished
+  let spySilent = 0;               // while > now, the spy does not touch history (programmatic scroll)
+  let curSub = body.dataset.sub || '';
+  const scrollerOf = p => phone.matches ? null : p.querySelector('.scroll');
+  function subTarget(p, sid) {
+    const nav = p.querySelector('.subnav');
+    if (!sid || !nav) return 0;
+    const sec = p.querySelector('#s-' + sid);
+    if (!sec) return 0;
+    const stick = parseFloat(getComputedStyle(nav).top) || 0;
+    const gap = stick + nav.offsetHeight + 18;
+    if (!phone.matches) { const sc = p.querySelector('.scroll'); return Math.max(0, sec.offsetTop - gap - (parseFloat(getComputedStyle(sc).paddingTop) || 0)); }
+    return Math.max(0, window.scrollY + sec.getBoundingClientRect().top - gap);
+  }
+  // the reader's own scrolling always wins over a correction
+  let touchedAt = 0;
+  ['wheel', 'touchstart', 'keydown', 'pointerdown'].forEach(t => addEventListener(t, () => { touchedAt = performance.now(); }, { passive: true, capture: true }));
+  let fixTimer = null, goal = null;
+  function scrollToSub(j, sid, smooth, tries = 2) {
+    goal = { j, sid };
+    const p = pages[j], top = subTarget(p, sid), sc = scrollerOf(p);
+    const behavior = smooth && !reduce ? 'smooth' : 'instant';
+    const t0 = performance.now();
+    spySilent = t0 + (behavior === 'smooth' ? 900 : 60);
+    if (sc) sc.scrollTo({ top, behavior }); else window.scrollTo({ top, behavior });
+    setSub(j, sid);
+    // content above may still grow (images, fonts, a sheet that just turned in):
+    // once the glide is over, measure again and settle on the section
+    clearTimeout(fixTimer);
+    if (tries > 0) fixTimer = setTimeout(() => {
+      if (touchedAt > t0 + 50 || !goal || goal.sid !== sid || cur !== j || nav) return;
+      const now = sc ? sc.scrollTop : window.scrollY, want = subTarget(p, sid);
+      const max = sc ? sc.scrollHeight - sc.clientHeight : document.documentElement.scrollHeight - innerHeight;
+      if (Math.abs(now - Math.min(want, max)) > 3) scrollToSub(j, sid, smooth, tries - 1);
+      else { goal = null; queueSpy(); }
+    }, behavior === 'smooth' ? 850 : 120);
+  }
+  function setSub(j, sid, { history: h = false } = {}) {
+    const p = pages[j];
+    p.querySelectorAll('.subnav-a').forEach(a => {
+      const on = a.dataset.sub === sid;
+      a.classList.toggle('is-active', on);
+      if (on) { a.setAttribute('aria-current', 'location'); const row = a.parentElement; if (row.scrollWidth > row.clientWidth) row.scrollTo({ left: a.offsetLeft - 24, behavior: reduce ? 'instant' : 'smooth' }); }
+      else a.removeAttribute('aria-current');
+    });
+    if (sid === curSub && !h) return;
+    curSub = sid;
+    const pg = cfg.pages[j], s = subOf(j, sid);
+    document.title = s ? `${s.title} · ${pg.title} · ${cfg.siteName}` : pg.id === cfg.home ? cfg.siteName : `${pg.title} · ${cfg.siteName}`;
+    const alt = (s && s.alt) || pg.alt;
+    if (alt) langLinks.forEach(a => { const to = alt[a.dataset.lang]; if (to !== undefined) a.href = new URL(to, root).href; });
+    if (h) try { history.replaceState({ id: pg.id, sub: sid }, '', subUrlOf(j, sid)); } catch (e) {}
+  }
+  let spyQueued = false;
+  function spy() {
+    spyQueued = false;
+    if (nav || frontIdx < 0) return;
+    const p = pages[frontIdx], navEl = p.querySelector('.subnav');
+    if (!navEl) return;
+    const stuck = isStuck(navEl);
+    navEl.classList.toggle('is-stuck', stuck);
+    const line = navEl.getBoundingClientRect().bottom + 28;
+    let sid = '';
+    // until the menu sticks, the reader is still on the main page itself
+    if (stuck) p.querySelectorAll('.sub').forEach(sec => { if (sec.getBoundingClientRect().top <= line) sid = sec.dataset.sub; });
+    // reaching the very end counts as the last section, even if it is short
+    const sc = scrollerOf(p);
+    const atEnd = sc ? sc.scrollTop + sc.clientHeight >= sc.scrollHeight - 2 : window.scrollY + innerHeight >= document.documentElement.scrollHeight - 2;
+    const secs = p.querySelectorAll('.sub');
+    if (atEnd && secs.length && secs[secs.length - 1].getBoundingClientRect().top < innerHeight * .8) sid = secs[secs.length - 1].dataset.sub;
+    if (goal && performance.now() < spySilent + 900) sid = goal.sid;
+    if (sid !== curSub) setSub(frontIdx, sid, { history: performance.now() > spySilent });
+  }
+  const queueSpy = () => { if (!spyQueued) { spyQueued = true; requestAnimationFrame(spy); } };
+  pages.forEach((p, j) => {
+    if (!p.querySelector('.subnav')) return;
+    p.querySelector('.scroll').addEventListener('scroll', queueSpy, { passive: true });
+    // absolute links: the address changes while reading, relative ones would break
+    p.querySelectorAll('.subnav-a').forEach(a => { a.href = a.dataset.sub ? subUrlOf(j, a.dataset.sub) : urlOf(p.dataset.id); });
+  });
+  function isStuck(navEl) {
+    const sc = scrollerOf(navEl.closest('.page'));
+    const st = getComputedStyle(navEl);
+    const want = (parseFloat(st.top) || 0) + (sc ? sc.getBoundingClientRect().top + (parseFloat(getComputedStyle(sc).paddingTop) || 0) : 0);
+    return navEl.getBoundingClientRect().top <= want + 1 && (sc ? sc.scrollTop > 0 : window.scrollY > 0);
+  }
+  addEventListener('scroll', queueSpy, { passive: true });
+  // a page turned by tabs or swipe starts without a subpage selected
+  function afterTurn(j) {
+    if (pendingSub && pendingSub.j === j) { const s = pendingSub.sub; pendingSub = null; if (phone.matches) scrollToSub(j, s, true); else setSub(j, s); }
+    else { curSub = ''; queueSpy(); }
   }
 
   // On phones the document scrolls. Before a turn, the page glides back to its top,
@@ -279,8 +387,20 @@
     requestAnimationFrame(step);
   }
 
+  function goSub(j, sid, push = true) {
+    j = Math.max(0, Math.min(N - 1, j));
+    if (j === cur && !nav) {
+      if (push && sid !== curSub) try { history.pushState({ id: pages[j].dataset.id, sub: sid }, '', subUrlOf(j, sid)); } catch (e) {}
+      scrollToSub(j, sid, true);
+      return;
+    }
+    pendingSub = { j, sub: sid };
+    if (!phone.matches) { const sc = scrollerOf(pages[j]); if (sc) sc.scrollTop = subTarget(pages[j], sid); }
+    go(j, push);
+  }
   function go(j, push = true) {
     j = Math.max(0, Math.min(N - 1, j));
+    if (!pendingSub || pendingSub.j !== j) pendingSub = null;
     if (phone.matches && window.scrollY > 1 && (j !== cur || nav)) {
       setMark(j);                                    // the tab answers at once, the turn follows the glide
       glideToTopThen(() => turnTo(j, push));
@@ -316,7 +436,7 @@
       if (nav.lifted) {
         focus.t = nav.to;
         tilt.t = flat ? 0 : 1;
-        if (Math.abs(focus.x - nav.to) < .04 && Math.abs(focus.v) < .5) { cur = nav.to; nav = null; tilt.t = 0; }
+        if (Math.abs(focus.x - nav.to) < .04 && Math.abs(focus.v) < .5) { cur = nav.to; nav = null; tilt.t = 0; afterTurn(cur); }
       }
     }
     if (!scrub) {
@@ -385,9 +505,12 @@
     if (!a || a.target === '_blank' || e.metaKey || e.ctrlKey) return;
     const u = new URL(a.href, location.href);
     if (u.origin !== location.origin || !u.pathname.startsWith(proot.pathname)) return;
-    const rel = u.pathname.slice(proot.pathname.length).replace(/\/(index\.html)?$/, '');
-    const j = rel ? idx(rel) : idx(cfg.home);
-    if (j >= 0 && !u.hash) { e.preventDefault(); go(j); }
+    const r = routeOf(u.pathname);
+    const j = r.id ? idx(r.id) : -1;
+    if (j < 0 || u.hash) return;
+    e.preventDefault();
+    if (r.sub || a.classList.contains('subnav-a') || (j === cur && !nav && curSub)) goSub(j, r.sub);
+    else go(j);
   });
 
   const stage = document.getElementById('stage');
@@ -472,7 +595,10 @@
     if (e.key === 'ArrowRight') { go(at + 1); e.preventDefault(); }
     if (e.key === 'ArrowLeft') { go(at - 1); e.preventDefault(); }
   });
-  addEventListener('popstate', () => { const id = idFromLocation(); go(id ? idx(id) : idx(cfg.home), false); });
+  addEventListener('popstate', () => {
+    const r = routeOf(location.pathname), j = r.id ? idx(r.id) : idx(cfg.home);
+    if (r.sub || (j === cur && !nav)) goSub(j, r.sub, false); else go(j, false);
+  });
 
   // phones: tabs on top wrap into rows; the page starts below them
   const footEl = document.getElementById('site-foot');
@@ -679,7 +805,14 @@
   });
 
   // ---------- start ----------
-  try { history.replaceState({ id: pages[cur].dataset.id }, ''); } catch (e) {}
+  try { history.replaceState({ id: pages[cur].dataset.id, sub: curSub }, ''); } catch (e) {}
   setMark(cur);
   render();
+  // opened at a subpage's address: start at that section
+  if (curSub) {
+    const s0 = curSub; curSub = '';
+    const jump = () => scrollToSub(cur, s0, false);
+    jump(); requestAnimationFrame(jump);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (curSub === s0) jump(); });
+  }
 })();

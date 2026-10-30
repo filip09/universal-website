@@ -87,7 +87,7 @@ pages = [
      "", "", "Dokud není hotová, dejte visible = no."),
 ]
 sheet("pages", [("id", 12), ("order", 7), ("tab_label", 12), ("title", 26), ("hue", 6), ("visible", 8),
-                ("content", 64), ("description", 36), ("share_image", 13), ("notes", 30)],
+                ("content", 64), ("description", 36), ("share_image", 13), ("notes", 30), ("parent_page", 14)],
       pages, code_cols=(6,), note_cols=(9,), validations={5: YESNO}, tab="F0A33C")
 
 # ---------- texts ----------
@@ -361,6 +361,20 @@ for line in [
     "Až budete s úpravami hotovi, klikněte v horním menu na Web → Publikovat. Za minutu až dvě je web online.",
     "Výsledek se objeví v listu stav: kdy se publikovalo, jestli vše proběhlo a případná upozornění (třeba chybějící obrázek).",
     "Dokud nekliknete na Publikovat, návštěvníci vidí předchozí verzi. Upravovat tedy můžete v klidu.",
+]:
+    put(r, ["•", line])
+    g.merge_cells(start_row=r, start_column=2, end_row=r, end_column=4)
+    g.row_dimensions[r].height = 28
+    r += 1
+
+section("Podstránky")
+for line in [
+    "Podstránka je řádek v pages, který má ve sloupci parent_page id hlavní stránky. Prázdné parent_page = hlavní stránka se záložkou.",
+    "Podstránky nemají vlastní záložku. Zobrazí se na listu své hlavní stránky: nejdřív obsah hlavní stránky, pak menu, pak podstránky za sebou.",
+    "Menu se při čtení drží nahoře na listu a ukazuje, kde čtenář je. První položka (tab_label hlavní stránky) vede zpět nahoru.",
+    "order u podstránky určuje pořadí v rámci její hlavní stránky. tab_label je krátký název v menu, title nadpis podstránky, hue se nepoužije.",
+    "Každá podstránka má vlastní adresu, např. /jak-to-probiha/konzultace/. V odkazech stačí psát /konzultace/.",
+    "Podstránky jsou jen o jednu úroveň. Jako home_page nastavte vždy hlavní stránku.",
 ]:
     put(r, ["•", line])
     g.merge_cells(start_row=r, start_column=2, end_row=r, end_column=4)

@@ -339,30 +339,26 @@
     if (h) try { history.replaceState({ id: pg.id, sub: sid }, '', subUrlOf(j, sid)); } catch (e) {}
   }
   let spyQueued = false;
-  // The phone bar is in the document only while it is shown. Hiding it takes it
-  // out of the document altogether (after a short fade), because Safari kept
-  // drawing a hidden fixed element with backdrop blur, even on other pages.
-  let subbarOut = null;
-  let subbarOn = null;
+  // Phones: the stuck menu is a second row inside the tab bar (#marks), the one
+  // element Safari reliably draws above the 3D stack. The row is in the document
+  // only while it is shown; hiding takes it out at once (together with the page
+  // menu coming back), so nothing can hang on screen on other pages.
   function hideSubbar() {
-    clearTimeout(subbarOn);
     pages.forEach(p => p.classList.remove('subbar-on'));
-    if (!subbar.isConnected) return;
     body.classList.remove('has-subbar');
-    clearTimeout(subbarOut);
-    subbarOut = setTimeout(() => { if (!body.classList.contains('has-subbar')) { subbar.remove(); subbar.replaceChildren(); subbarFor = -1; } }, 300);
+    if (subbar.isConnected) subbar.remove();
   }
   function showSubbar(j) {
     const p = pages[j];
-    clearTimeout(subbarOut);
     if (subbarFor !== j) {
-      const fade = document.createElement('div'); fade.className = 'subbar-fade';
-      subbar.replaceChildren(p.querySelector('.subnav-in').cloneNode(true), fade);
+      const copy = p.querySelector('.subnav-in').cloneNode(true);
+      copy.querySelectorAll('a').forEach(a => a.tabIndex = -1);
+      subbar.replaceChildren(copy);
       subbar.setAttribute('style', p.getAttribute('style') || '');
       subbarFor = j;
       setSub(j, curSub, { force: true });
     }
-    if (!subbar.isConnected) { body.appendChild(subbar); void subbar.offsetWidth; }
+    if (!subbar.isConnected) marksEl.appendChild(subbar);
     // same sideways position as the page's menu, so the swap is invisible
     const row = p.querySelector('.subnav:not(.subnav-float) .subnav-in'), copy = subbar.querySelector('.subnav-in');
     if (row && copy) copy.scrollLeft = row.scrollLeft;
@@ -685,7 +681,10 @@
   // phones: tabs on top wrap into rows; the page starts below them
   const footEl = document.getElementById('site-foot');
   const setMh = () => {
-    document.documentElement.style.setProperty('--mh', marksEl.offsetHeight + 'px');
+    // the tab rows only: the menu row inside the bar must not push the page down
+    let mh = marksEl.offsetHeight;
+    if (subbar.isConnected) { mh = 0; marks.forEach(m => { mh = Math.max(mh, m.offsetTop + m.offsetHeight); }); mh += parseFloat(getComputedStyle(marksEl).paddingBottom) || 0; }
+    document.documentElement.style.setProperty('--mh', mh + 'px');
     if (footEl) document.documentElement.style.setProperty('--fh', footEl.offsetHeight + 'px');
   };
   setMh();

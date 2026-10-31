@@ -299,20 +299,15 @@ figcaption{font-size:.85em;color:var(--muted);margin-top:8px}
   .subnav{position:static;padding-top:8px}
   .page.has-subnav .scroll{-webkit-mask-image:none;mask-image:none}
   .subnav-float{display:none}
-  /* phones: the bar holds a copy of the menu in exactly the same place and look as the
-     menu on the page; around it, the text below is blurred and fades out softly (mask:
-     fine here, the bar lives outside the 3D stack). The tab bar itself never changes. */
-  .subbar{display:block;position:fixed;z-index:6;-webkit-transform:translateZ(0);transform:translateZ(0);left:0;right:0;top:calc(var(--mh,52px) - 7px);
-    padding:8px calc((100vw - min(660px, 100vw - 58px)) / 2) 0;pointer-events:none}
-  .subbar .subnav-in{pointer-events:auto}
-  /* the copy replaces the page's menu at once and pixel for pixel; only the soft blur
-     under it eases in and out */
-  body:not(.has-subbar) .subbar .subnav-in{visibility:hidden}
-  .subbar-fade{position:absolute;left:0;right:0;top:100%;height:34px;pointer-events:none;
-    -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
-    -webkit-mask-image:linear-gradient(#000, transparent);mask-image:linear-gradient(#000, transparent);
-    opacity:0;transition:opacity .25s ease}
-  body.has-subbar .subbar-fade{opacity:1}
+  /* phones: the stuck menu is a second row INSIDE the tab bar (#marks). Safari draws the
+     tab bar correctly over the 3D stack (fixed, its own blur, no mask, no 3D transform),
+     so the menu gets exactly that: same element, same glass, same blur. The row's pill
+     sits pixel for pixel where the page's menu was, so the swap is invisible; below it
+     the bar's blur runs on a little and its tint fades out (gradient, not a mask). */
+  .subbar{display:block;flex:0 0 100%;min-width:0;box-sizing:border-box;margin:0;
+    padding:1px calc((100vw - min(660px, 100vw - 58px)) / 2 - max(10px, env(safe-area-inset-left,0px))) 18px}
+  body.has-subbar .marks{
+    background:linear-gradient(to bottom, rgba(8,8,14,.62), rgba(8,8,14,.5) calc(100% - 20px), rgba(8,8,14,0))}
   .page.subbar-on .subnav:not(.subnav-float){visibility:hidden}
   /* one look for the menu everywhere on phones: a dense glass pill */
   .subnav-in{background:linear-gradient(to bottom, rgba(var(--glass-rgb),.9), rgba(var(--glass-rgb),.84))}

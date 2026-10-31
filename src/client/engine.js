@@ -327,7 +327,7 @@
     [...p.querySelectorAll('.subnav-a'), ...(subbarFor === j ? subbar.querySelectorAll('.subnav-a') : [])].forEach(a => {
       const on = a.dataset.sub === sid;
       a.classList.toggle('is-active', on);
-      if (on) { a.setAttribute('aria-current', 'location'); const row = a.parentElement; if (row.scrollWidth > row.clientWidth) row.scrollTo({ left: a.offsetLeft - 24, behavior: reduce ? 'instant' : 'smooth' }); }
+      if (on) { a.setAttribute('aria-current', 'location'); const row = a.parentElement; if (row.scrollWidth > row.clientWidth) row.scrollTo({ left: a.offsetLeft - 24, behavior: reduce ? 'auto' : 'smooth' }); }
       else a.removeAttribute('aria-current');
     });
     if (sid === curSub && !h || force) return;
@@ -343,7 +343,10 @@
   // out of the document altogether (after a short fade), because Safari kept
   // drawing a hidden fixed element with backdrop blur, even on other pages.
   let subbarOut = null;
+  let subbarOn = null;
   function hideSubbar() {
+    clearTimeout(subbarOn);
+    pages.forEach(p => p.classList.remove('subbar-on'));
     if (!subbar.isConnected) return;
     body.classList.remove('has-subbar');
     clearTimeout(subbarOut);
@@ -353,13 +356,20 @@
     const p = pages[j];
     clearTimeout(subbarOut);
     if (subbarFor !== j) {
-      subbar.replaceChildren(p.querySelector('.subnav-in').cloneNode(true));
+      const fade = document.createElement('div'); fade.className = 'subbar-fade';
+      subbar.replaceChildren(p.querySelector('.subnav-in').cloneNode(true), fade);
       subbar.setAttribute('style', p.getAttribute('style') || '');
       subbarFor = j;
       setSub(j, curSub, { force: true });
     }
     if (!subbar.isConnected) { body.appendChild(subbar); void subbar.offsetWidth; }
-    body.classList.add('has-subbar');
+    // same sideways position as the page's menu, so the swap is invisible
+    const row = p.querySelector('.subnav:not(.subnav-float) .subnav-in'), copy = subbar.querySelector('.subnav-in');
+    if (row && copy) copy.scrollLeft = row.scrollLeft;
+    if (!body.classList.contains('has-subbar')) {
+      body.classList.add('has-subbar');
+      p.classList.add('subbar-on');
+    }
   }
   function spy() {
     spyQueued = false;
@@ -409,7 +419,11 @@
     const p = pages[j];
     p.classList.toggle('is-stuck', stuck);
     const fl = p.querySelector('.subnav-float');
-    if (fl && stuck) p.style.setProperty('--float-h', fl.offsetHeight ? fl.offsetHeight + 'px' : '64px');
+    if (fl && stuck) {
+      p.style.setProperty('--float-h', fl.offsetHeight ? fl.offsetHeight + 'px' : '64px');
+      const row = p.querySelector('.subnav:not(.subnav-float) .subnav-in'), copy = fl.querySelector('.subnav-in');
+      if (row && copy) copy.scrollLeft = row.scrollLeft;
+    }
     if (phone.matches) {
       if (stuck && j === frontIdx) showSubbar(j); else hideSubbar();
     }

@@ -123,16 +123,17 @@ figcaption{font-size:.85em;color:var(--muted);margin-top:8px}
 @property --fade-at{syntax:'<length>';inherits:false;initial-value:0px}
 @property --fade-len{syntax:'<length>';inherits:false;initial-value:0px}
 .subnav{position:sticky;top:-56px;z-index:3;margin:26px 0 4px!important;padding-top:12px}
-.page.is-stuck .subnav:not(.subnav-float){visibility:hidden}
 .page.has-subnav .scroll{
   -webkit-mask-image:linear-gradient(to bottom, transparent var(--fade-at), #000 calc(var(--fade-at) + var(--fade-len)));
   mask-image:linear-gradient(to bottom, transparent var(--fade-at), #000 calc(var(--fade-at) + var(--fade-len)));
-  transition:--fade-at .35s ease,--fade-len .35s ease}
-.page.is-stuck .scroll{--fade-at:var(--float-h,64px);--fade-len:64px}
+  transition:none}
+/* the menu area is masked at once (the copy is in exactly the same place), only the
+   soft edge below it eases in; un-sticking is instant, so nothing ever blinks */
+.page.is-stuck .scroll{--fade-at:var(--float-h,64px);--fade-len:64px;transition:--fade-len .35s ease}
 .subnav-float{position:absolute;z-index:4;top:0;left:0;right:0;margin:0!important;padding:12px max(28px, calc((100% - 660px) / 2)) 0;
-  pointer-events:none;opacity:0;transform:translateY(-6px);transition:opacity .3s ease,transform .35s cubic-bezier(.2,.8,.2,1)}
+  pointer-events:none;visibility:hidden}
 .subnav-float .subnav-in{pointer-events:auto}
-.page.is-stuck .subnav-float{opacity:1;transform:none}
+.page.is-stuck .subnav-float{visibility:visible}
 .subbar{display:none}
 .subnav-in{position:relative;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding:5px;border-radius:16px;
   background:linear-gradient(to bottom, rgba(255,255,255,.075), rgba(255,255,255,.025));
@@ -293,19 +294,23 @@ figcaption{font-size:.85em;color:var(--muted);margin-top:8px}
   .subnav{top:calc(var(--mh,52px) - 7px);padding-top:8px}
   .page.has-subnav .scroll{-webkit-mask-image:none;mask-image:none}
   .subnav-float{display:none}
-  /* phones: the menu joins the tab bar. One sheet of frosted glass runs from the top
-     of the screen under the tabs and the menu, and fades out softly below: the fade is
-     a mask, which works here because the bar lives outside the 3D stack. */
-  .subbar{display:block;position:fixed;z-index:4;left:0;right:0;top:0;
-    padding:calc(var(--mh,52px) - 1px) max(10px, env(safe-area-inset-right,0px)) 40px max(10px, env(safe-area-inset-left,0px));
-    background:linear-gradient(to bottom, rgba(8,8,14,.6), rgba(8,8,14,.5) 70%, rgba(8,8,14,.3));
-    -webkit-backdrop-filter:blur(18px) saturate(1.3);backdrop-filter:blur(18px) saturate(1.3);
-    -webkit-mask-image:linear-gradient(#000 calc(100% - 38px), transparent);mask-image:linear-gradient(#000 calc(100% - 38px), transparent);
-    opacity:0;transition:opacity .28s ease}
-  body.has-subbar .subbar{opacity:1}
-  .subbar .subnav-in{transform:translateY(-6px);transition:transform .35s cubic-bezier(.2,.8,.2,1)}
-  body.has-subbar .subbar .subnav-in{transform:none}
-  body.has-subbar .marks{background:transparent!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+  /* phones: the bar holds a copy of the menu in exactly the same place and look as the
+     menu on the page; around it, the text below is blurred and fades out softly (mask:
+     fine here, the bar lives outside the 3D stack). The tab bar itself never changes. */
+  .subbar{display:block;position:fixed;z-index:4;left:0;right:0;top:calc(var(--mh,52px) - 7px);
+    padding:8px calc((100vw - min(660px, 100vw - 58px)) / 2) 0;pointer-events:none}
+  .subbar .subnav-in{pointer-events:auto}
+  /* the copy replaces the page's menu at once and pixel for pixel; only the soft blur
+     under it eases in and out */
+  body:not(.has-subbar) .subbar .subnav-in{visibility:hidden}
+  .subbar-fade{position:absolute;left:0;right:0;top:100%;height:34px;pointer-events:none;
+    -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+    -webkit-mask-image:linear-gradient(#000, transparent);mask-image:linear-gradient(#000, transparent);
+    opacity:0;transition:opacity .25s ease}
+  body.has-subbar .subbar-fade{opacity:1}
+  .page.subbar-on .subnav:not(.subnav-float){visibility:hidden}
+  /* one look for the menu everywhere on phones: a dense glass pill */
+  .subnav-in{background:linear-gradient(to bottom, rgba(var(--glass-rgb),.9), rgba(var(--glass-rgb),.84))}
   .subnav-a{padding:9px 12px}
   .page.is-front{position:relative;max-height:none}
   .scroll{position:static;overflow:visible}

@@ -307,24 +307,8 @@ figcaption{font-size:.85em;color:var(--muted);margin-top:8px}
      tab bar correctly over the 3D stack (fixed, its own blur, no mask, no 3D transform),
      so the menu gets exactly that: same element, same glass, same blur. The row's pill
      sits pixel for pixel where the page's menu was, so the swap is invisible; below it
-     the blur steps down in thin bands (no mask: Safari drops the blur under a mask) and
-     the tint fades out, so there is no hard edge. While the menu row is there, the bar's
-     own blur moves to ::before: a blurred element can't let its children blur the page. */
+     the bar simply ends, with the same clean glass edge as under the tabs. */
   .subbar{display:block;flex:0 0 100%;min-width:0;box-sizing:border-box;margin:0;padding:1px 0 0}
-  body.has-subbar .marks{background:none;-webkit-backdrop-filter:none;backdrop-filter:none}
-  body.has-subbar .marks::before{content:"";position:absolute;inset:0 0 6px;z-index:-1;pointer-events:none;
-    background:linear-gradient(to bottom, rgba(8,8,14,.55), rgba(8,8,14,.3) 60%, rgba(8,8,14,.2));
-    -webkit-backdrop-filter:blur(16px) saturate(1.25);backdrop-filter:blur(16px) saturate(1.25)}
-  .subbar-tail{position:absolute;left:0;right:0;top:calc(100% - 6px);height:12px;pointer-events:none;
-    background:linear-gradient(to bottom, rgba(8,8,14,.2), rgba(8,8,14,0))}
-  /* overlapping layers from the top, each a gentle 2px blur: they add up near the menu
-     and thin out downwards. Tall layers, because Safari blurs only inside each layer. */
-  .subbar-tail i{position:absolute;left:0;right:0;top:0;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
-  .subbar-tail i:nth-child(1){height:12px}
-  .subbar-tail i:nth-child(2){height:9px}
-  .subbar-tail i:nth-child(3){height:6px}
-  .subbar-tail i:nth-child(4){height:3px}
-  
   .page.subbar-on .subnav:not(.subnav-float){visibility:hidden}
   /* one look for the menu everywhere on phones: a dense glass pill */
   .subnav-in{background:linear-gradient(to bottom, rgba(var(--glass-rgb),.9), rgba(var(--glass-rgb),.84))}

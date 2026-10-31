@@ -293,7 +293,10 @@ figcaption{font-size:.85em;color:var(--muted);margin-top:8px}
   .stage{position:relative;inset:auto;min-height:100lvh;perspective-origin:50% 45vh}
   .stack{position:relative;left:auto;top:auto;bottom:auto;margin:calc(var(--mh,52px) + 4px) auto calc(env(safe-area-inset-bottom,0px) + 84px);transform-origin:50% 45vh}
   .page{inset:0 0 auto 0;max-height:100lvh;overflow:clip}
-  .subnav{top:calc(var(--mh,52px) - 7px);padding-top:8px}
+  /* phones: the menu on the page is NOT sticky. Inside the 3D stack Safari sticks it
+     on its own terms and paints the text over it; the stuck role belongs to the bar
+     outside the stack (.subbar), which Safari draws above the page like the tabs. */
+  .subnav{position:static;padding-top:8px}
   .page.has-subnav .scroll{-webkit-mask-image:none;mask-image:none}
   .subnav-float{display:none}
   /* phones: the bar holds a copy of the menu in exactly the same place and look as the

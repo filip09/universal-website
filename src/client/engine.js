@@ -339,11 +339,15 @@
     if (h) try { history.replaceState({ id: pg.id, sub: sid }, '', subUrlOf(j, sid)); } catch (e) {}
   }
   let spyQueued = false;
+  function hideSubbar() { body.classList.remove('has-subbar'); }
   function spy() {
     spyQueued = false;
-    if (nav || frontIdx < 0) return;
+    try { spyNow(); } catch (e) { hideSubbar(); }
+  }
+  function spyNow() {
+    if (nav || frontIdx < 0) { hideSubbar(); return; }
     const p = pages[frontIdx], navEl = p.querySelector('.subnav:not(.subnav-float)');
-    if (!navEl) { body.classList.remove('has-subbar'); return; }
+    if (!navEl) { hideSubbar(); return; }
     const stuck = isStuck(navEl);
     navEl.classList.toggle('is-stuck', stuck);
     if (stuck !== p.classList.contains('is-stuck') || (phone.matches && stuck !== body.classList.contains('has-subbar'))) showStuck(frontIdx, stuck);
@@ -388,7 +392,7 @@
     if (fl && stuck) p.style.setProperty('--float-h', fl.offsetHeight ? fl.offsetHeight + 'px' : '64px');
     if (phone.matches) {
       if (stuck && subbarFor !== j) { subbar.replaceChildren(p.querySelector('.subnav-in').cloneNode(true)); subbar.setAttribute('style', p.getAttribute('style') || ''); subbarFor = j; setSub(j, curSub, { force: true }); }
-      body.classList.toggle('has-subbar', stuck);
+      body.classList.toggle('has-subbar', stuck && j === frontIdx);
     }
   }
   subbar.addEventListener('click', e => {
@@ -454,7 +458,7 @@
   }
 
   function turnTo(j, push) {
-    if (j !== cur || nav) toTop();
+    if (j !== cur || nav) { toTop(); hideSubbar(); }
     if (!nav && j === cur && Math.abs(focus.x - j) < .01) return;
     if (nav && nav.to === j) return;
     nav = { to: j, lifted: reduce || ANGLE === 0 || tilt.x > .55 || !!(nav && nav.lifted) };
@@ -518,6 +522,7 @@
     if (front !== frontIdx) {
       const prev = pages[frontIdx];
       frontIdx = front;
+      hideSubbar();
       pages.forEach((p, k) => { p.inert = k !== front; p.classList.toggle('is-front', k === front); p.setAttribute('aria-hidden', String(k !== front)); });
       if (prev) deactivate(prev);
       activate(pages[front]);

@@ -23,7 +23,9 @@ a:hover{color:#fff}
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
 
 /* stage and pages */
-.stage{position:fixed;inset:0;perspective:2200px;perspective-origin:50% 45%}
+/* the 3D stack lives in its own layer under the fixed bars: Safari otherwise draws
+   3D-transformed content over fixed elements, whatever their z-index */
+.stage{position:fixed;inset:0;perspective:2200px;perspective-origin:50% 45%;z-index:0}
 .stack{position:absolute;left:50%;top:max(32px, env(safe-area-inset-top,0px));bottom:calc(var(--fh,44px) + 4px);width:var(--pw);margin-left:calc(var(--pw) / -2);transform-style:preserve-3d;will-change:transform}
 .page{position:absolute;inset:0;border-radius:var(--radius);
   background:
@@ -297,7 +299,7 @@ figcaption{font-size:.85em;color:var(--muted);margin-top:8px}
   /* phones: the bar holds a copy of the menu in exactly the same place and look as the
      menu on the page; around it, the text below is blurred and fades out softly (mask:
      fine here, the bar lives outside the 3D stack). The tab bar itself never changes. */
-  .subbar{display:block;position:fixed;z-index:4;left:0;right:0;top:calc(var(--mh,52px) - 7px);
+  .subbar{display:block;position:fixed;z-index:6;-webkit-transform:translateZ(0);transform:translateZ(0);left:0;right:0;top:calc(var(--mh,52px) - 7px);
     padding:8px calc((100vw - min(660px, 100vw - 58px)) / 2) 0;pointer-events:none}
   .subbar .subnav-in{pointer-events:auto}
   /* the copy replaces the page's menu at once and pixel for pixel; only the soft blur

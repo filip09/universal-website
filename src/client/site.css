@@ -297,17 +297,35 @@ figcaption{font-size:.85em;color:var(--muted);margin-top:8px}
      on its own terms and paints the text over it; the stuck role belongs to the bar
      outside the stack (.subbar), which Safari draws above the page like the tabs. */
   .subnav{position:static;padding-top:8px}
+  /* the menu runs as wide as the tab rows above it (same side gutter), on the page too,
+     so the stuck copy can take exactly its place */
+  .subnav:not(.subnav-float){margin-left:calc(max(10px, env(safe-area-inset-left,0px)) - (100vw - min(660px, 100vw - 58px)) / 2)!important;
+    margin-right:calc(max(10px, env(safe-area-inset-right,0px)) - (100vw - min(660px, 100vw - 58px)) / 2)!important}
   .page.has-subnav .scroll{-webkit-mask-image:none;mask-image:none}
   .subnav-float{display:none}
   /* phones: the stuck menu is a second row INSIDE the tab bar (#marks). Safari draws the
      tab bar correctly over the 3D stack (fixed, its own blur, no mask, no 3D transform),
      so the menu gets exactly that: same element, same glass, same blur. The row's pill
      sits pixel for pixel where the page's menu was, so the swap is invisible; below it
-     the bar's blur runs on a little and its tint fades out (gradient, not a mask). */
-  .subbar{display:block;flex:0 0 100%;min-width:0;box-sizing:border-box;margin:0;
-    padding:1px calc((100vw - min(660px, 100vw - 58px)) / 2 - max(10px, env(safe-area-inset-left,0px))) 18px}
-  body.has-subbar .marks{
-    background:linear-gradient(to bottom, rgba(8,8,14,.62), rgba(8,8,14,.5) calc(100% - 20px), rgba(8,8,14,0))}
+     the blur steps down in thin bands (no mask: Safari drops the blur under a mask) and
+     the tint fades out, so there is no hard edge. While the menu row is there, the bar's
+     own blur moves to ::before: a blurred element can't let its children blur the page. */
+  .subbar{display:block;flex:0 0 100%;min-width:0;box-sizing:border-box;margin:0;padding:1px 0 0}
+  body.has-subbar .marks{background:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+  body.has-subbar .marks::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+    background:linear-gradient(to bottom, rgba(8,8,14,.55), rgba(8,8,14,.3) 60%, rgba(8,8,14,.2));
+    -webkit-backdrop-filter:blur(16px) saturate(1.25);backdrop-filter:blur(16px) saturate(1.25)}
+  .subbar-tail{position:absolute;left:0;right:0;top:100%;height:16px;pointer-events:none;
+    background:linear-gradient(to bottom, rgba(8,8,14,.2), rgba(8,8,14,0))}
+  .subbar-tail i{position:absolute;left:0;right:0;height:2px}
+  .subbar-tail i:nth-child(1){top:0px;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+  .subbar-tail i:nth-child(2){top:2px;-webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px)}
+  .subbar-tail i:nth-child(3){top:4px;-webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px)}
+  .subbar-tail i:nth-child(4){top:6px;-webkit-backdrop-filter:blur(5.5px);backdrop-filter:blur(5.5px)}
+  .subbar-tail i:nth-child(5){top:8px;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+  .subbar-tail i:nth-child(6){top:10px;-webkit-backdrop-filter:blur(2.8px);backdrop-filter:blur(2.8px)}
+  .subbar-tail i:nth-child(7){top:12px;-webkit-backdrop-filter:blur(1.8px);backdrop-filter:blur(1.8px)}
+  .subbar-tail i:nth-child(8){top:14px;-webkit-backdrop-filter:blur(1px);backdrop-filter:blur(1px)}
   .page.subbar-on .subnav:not(.subnav-float){visibility:hidden}
   /* one look for the menu everywhere on phones: a dense glass pill */
   .subnav-in{background:linear-gradient(to bottom, rgba(var(--glass-rgb),.9), rgba(var(--glass-rgb),.84))}

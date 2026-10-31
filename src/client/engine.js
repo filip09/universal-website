@@ -347,6 +347,7 @@
     pages.forEach(p => p.classList.remove('subbar-on'));
     body.classList.remove('has-subbar');
     if (subbar.isConnected) subbar.remove();
+    if (subbarTail.isConnected) subbarTail.remove();
   }
   function showSubbar(j) {
     const p = pages[j];
@@ -358,7 +359,7 @@
       subbarFor = j;
       setSub(j, curSub, { force: true });
     }
-    if (!subbar.isConnected) marksEl.appendChild(subbar);
+    if (!subbar.isConnected) marksEl.append(subbar, subbarTail);
     // same sideways position as the page's menu, so the swap is invisible
     const row = p.querySelector('.subnav:not(.subnav-float) .subnav-in'), copy = subbar.querySelector('.subnav-in');
     if (row && copy) copy.scrollLeft = row.scrollLeft;
@@ -401,6 +402,9 @@
   // the floating copy of each menu (computer) and the phone's bar under the tabs
   const subbar = document.createElement('div');
   subbar.className = 'subbar'; subbar.setAttribute('aria-hidden', 'true');
+  // under the menu row: the blur steps down in thin bands instead of ending in an edge
+  const subbarTail = document.createElement('div');
+  subbarTail.className = 'subbar-tail'; subbarTail.innerHTML = '<i></i>'.repeat(8);
   pages.forEach(p => {
     const nav = p.querySelector('.subnav');
     if (!nav) return;

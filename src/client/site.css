@@ -312,20 +312,19 @@ figcaption{font-size:.85em;color:var(--muted);margin-top:8px}
      own blur moves to ::before: a blurred element can't let its children blur the page. */
   .subbar{display:block;flex:0 0 100%;min-width:0;box-sizing:border-box;margin:0;padding:1px 0 0}
   body.has-subbar .marks{background:none;-webkit-backdrop-filter:none;backdrop-filter:none}
-  body.has-subbar .marks::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  body.has-subbar .marks::before{content:"";position:absolute;inset:0 0 6px;z-index:-1;pointer-events:none;
     background:linear-gradient(to bottom, rgba(8,8,14,.55), rgba(8,8,14,.3) 60%, rgba(8,8,14,.2));
     -webkit-backdrop-filter:blur(16px) saturate(1.25);backdrop-filter:blur(16px) saturate(1.25)}
-  .subbar-tail{position:absolute;left:0;right:0;top:100%;height:16px;pointer-events:none;
+  .subbar-tail{position:absolute;left:0;right:0;top:calc(100% - 6px);height:24px;pointer-events:none;
     background:linear-gradient(to bottom, rgba(8,8,14,.2), rgba(8,8,14,0))}
-  .subbar-tail i{position:absolute;left:0;right:0;height:2px}
-  .subbar-tail i:nth-child(1){top:0px;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
-  .subbar-tail i:nth-child(2){top:2px;-webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px)}
-  .subbar-tail i:nth-child(3){top:4px;-webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px)}
-  .subbar-tail i:nth-child(4){top:6px;-webkit-backdrop-filter:blur(5.5px);backdrop-filter:blur(5.5px)}
-  .subbar-tail i:nth-child(5){top:8px;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
-  .subbar-tail i:nth-child(6){top:10px;-webkit-backdrop-filter:blur(2.8px);backdrop-filter:blur(2.8px)}
-  .subbar-tail i:nth-child(7){top:12px;-webkit-backdrop-filter:blur(1.8px);backdrop-filter:blur(1.8px)}
-  .subbar-tail i:nth-child(8){top:14px;-webkit-backdrop-filter:blur(1px);backdrop-filter:blur(1px)}
+  /* overlapping layers from the top, each a gentle 2px blur: they add up near the menu
+     and thin out downwards. Tall layers, because Safari blurs only inside each layer. */
+  .subbar-tail i{position:absolute;left:0;right:0;top:0;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px)}
+  .subbar-tail i:nth-child(1){height:24px}
+  .subbar-tail i:nth-child(2){height:19px}
+  .subbar-tail i:nth-child(3){height:14px}
+  .subbar-tail i:nth-child(4){height:9px}
+  .subbar-tail i:nth-child(5){height:5px}
   .page.subbar-on .subnav:not(.subnav-float){visibility:hidden}
   /* one look for the menu everywhere on phones: a dense glass pill */
   .subnav-in{background:linear-gradient(to bottom, rgba(var(--glass-rgb),.9), rgba(var(--glass-rgb),.84))}

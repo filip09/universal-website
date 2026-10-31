@@ -404,7 +404,7 @@
   subbar.className = 'subbar'; subbar.setAttribute('aria-hidden', 'true');
   // under the menu row: the blur steps down in thin bands instead of ending in an edge
   const subbarTail = document.createElement('div');
-  subbarTail.className = 'subbar-tail'; subbarTail.innerHTML = '<i></i>'.repeat(8);
+  subbarTail.className = 'subbar-tail'; subbarTail.innerHTML = '<i></i>'.repeat(5);
   pages.forEach(p => {
     const nav = p.querySelector('.subnav');
     if (!nav) return;

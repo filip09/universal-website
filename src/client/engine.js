@@ -278,15 +278,26 @@
   let spySilent = 0;               // while > now, the spy does not touch history (programmatic scroll)
   let curSub = body.dataset.sub || '';
   const scrollerOf = p => phone.matches ? null : p.querySelector('.scroll');
+  // On phones, positions come from the page layout (offsetTop), not from
+  // getBoundingClientRect: inside the 3D stack Safari reports the latter wrongly,
+  // which made the menu bar show up long before the menu reached the top.
+  function docTop(el) { let y = 0; for (let e = el; e; e = e.offsetParent) y += e.offsetTop; return y; }
+  const phoneStick = () => (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--mh')) || 52) - 7;
+  function navStaticTop(nav) {
+    const prev = nav.previousElementSibling, cs = getComputedStyle(nav);
+    const gap = parseFloat(getComputedStyle(nav.parentElement).rowGap) || 0, mt = parseFloat(cs.marginTop) || 0;
+    return prev ? docTop(prev) + prev.offsetHeight + gap + mt : docTop(nav.parentElement) + mt;
+  }
   function subTarget(p, sid) {
     const nav = p.querySelector('.subnav');
     if (!sid || !nav) return 0;
     const sec = p.querySelector('#s-' + sid);
     if (!sec) return 0;
+    if (phone.matches) return Math.max(0, docTop(sec) - (phoneStick() + nav.offsetHeight + 46));
     const stick = parseFloat(getComputedStyle(nav).top) || 0;
     const gap = stick + nav.offsetHeight + 46; // the text has come back from the fade by here
-    if (!phone.matches) { const sc = p.querySelector('.scroll'); return Math.max(0, sec.offsetTop - gap - (parseFloat(getComputedStyle(sc).paddingTop) || 0)); }
-    return Math.max(0, window.scrollY + sec.getBoundingClientRect().top - gap);
+    const sc = p.querySelector('.scroll');
+    return Math.max(0, sec.offsetTop - gap - (parseFloat(getComputedStyle(sc).paddingTop) || 0));
   }
   // the reader's own scrolling always wins over a correction
   let touchedAt = 0;
@@ -387,6 +398,7 @@
     goSub(frontIdx, a.dataset.sub);
   });
   function isStuck(navEl) {
+    if (phone.matches) return window.scrollY > 0 && window.scrollY + phoneStick() >= navStaticTop(navEl) - 1;
     const sc = scrollerOf(navEl.closest('.page'));
     const st = getComputedStyle(navEl);
     const want = (parseFloat(st.top) || 0) + (sc ? sc.getBoundingClientRect().top + (parseFloat(getComputedStyle(sc).paddingTop) || 0) : 0);

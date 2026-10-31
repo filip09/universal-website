@@ -339,7 +339,28 @@
     if (h) try { history.replaceState({ id: pg.id, sub: sid }, '', subUrlOf(j, sid)); } catch (e) {}
   }
   let spyQueued = false;
-  function hideSubbar() { body.classList.remove('has-subbar'); }
+  // The phone bar is in the document only while it is shown. Hiding it takes it
+  // out of the document altogether (after a short fade), because Safari kept
+  // drawing a hidden fixed element with backdrop blur, even on other pages.
+  let subbarOut = null;
+  function hideSubbar() {
+    if (!subbar.isConnected) return;
+    body.classList.remove('has-subbar');
+    clearTimeout(subbarOut);
+    subbarOut = setTimeout(() => { if (!body.classList.contains('has-subbar')) { subbar.remove(); subbar.replaceChildren(); subbarFor = -1; } }, 300);
+  }
+  function showSubbar(j) {
+    const p = pages[j];
+    clearTimeout(subbarOut);
+    if (subbarFor !== j) {
+      subbar.replaceChildren(p.querySelector('.subnav-in').cloneNode(true));
+      subbar.setAttribute('style', p.getAttribute('style') || '');
+      subbarFor = j;
+      setSub(j, curSub, { force: true });
+    }
+    if (!subbar.isConnected) { body.appendChild(subbar); void subbar.offsetWidth; }
+    body.classList.add('has-subbar');
+  }
   function spy() {
     spyQueued = false;
     try { spyNow(); } catch (e) { hideSubbar(); }
@@ -350,7 +371,7 @@
     if (!navEl) { hideSubbar(); return; }
     const stuck = isStuck(navEl);
     navEl.classList.toggle('is-stuck', stuck);
-    if (stuck !== p.classList.contains('is-stuck') || (phone.matches && stuck !== body.classList.contains('has-subbar'))) showStuck(frontIdx, stuck);
+    if (stuck !== p.classList.contains('is-stuck') || (phone.matches && stuck !== (subbar.isConnected && subbarFor === frontIdx && body.classList.contains('has-subbar')))) showStuck(frontIdx, stuck);
     // a section is being read once the page is scrolled to (or past) the spot
     // a click in the menu would bring it to; before the first one, it is the main page
     const sc0 = scrollerOf(p), y = sc0 ? sc0.scrollTop : window.scrollY;
@@ -374,7 +395,6 @@
   // the floating copy of each menu (computer) and the phone's bar under the tabs
   const subbar = document.createElement('div');
   subbar.className = 'subbar'; subbar.setAttribute('aria-hidden', 'true');
-  document.body.appendChild(subbar);
   pages.forEach(p => {
     const nav = p.querySelector('.subnav');
     if (!nav) return;
@@ -391,8 +411,7 @@
     const fl = p.querySelector('.subnav-float');
     if (fl && stuck) p.style.setProperty('--float-h', fl.offsetHeight ? fl.offsetHeight + 'px' : '64px');
     if (phone.matches) {
-      if (stuck && subbarFor !== j) { subbar.replaceChildren(p.querySelector('.subnav-in').cloneNode(true)); subbar.setAttribute('style', p.getAttribute('style') || ''); subbarFor = j; setSub(j, curSub, { force: true }); }
-      body.classList.toggle('has-subbar', stuck && j === frontIdx);
+      if (stuck && j === frontIdx) showSubbar(j); else hideSubbar();
     }
   }
   subbar.addEventListener('click', e => {
